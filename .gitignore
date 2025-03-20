@@ -40,5 +40,6 @@ app.json
 app-example
 
 #build
-app/
+../app/
 ios/
+android/
