@@ -1,11 +1,25 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { getProfile, login as kakaoLogin, logout as kakaoLogout } from '@react-native-seoul/kakao-login';
 
-const AuthContext = createContext();
+// AuthContext의 타입 정의
+interface AuthContextType {
+  user: { userId: string; kakao_id: number; nickname: string } | null; // 백엔드에서 반환되는 user 객체에 맞게 정의
+  signInWithKakao: () => Promise<void>;
+  signOut: () => Promise<void>;
+  error: string | null;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState(null);
+// createContext에 타입과 기본값 제공
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signInWithKakao: async () => {},
+  signOut: async () => {},
+  error: null,
+});
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<{ userId: string; kakao_id: number; nickname: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -25,7 +39,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           setUser(null);
         }
-      } catch (error) {
+      } catch (error: any) { // error 타입 명시
         setUser(null);
       }
     };
@@ -59,7 +73,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(data.user); // 백엔드에서 받은 user 객체로 설정
       setError(null);
-    } catch (error) {
+    } catch (error: any) { // error 타입 명시
       console.error('카카오 로그인 실패:', error);
       setError(error.message);
       throw error;
@@ -71,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       await kakaoLogout();
       setUser(null);
       setError(null);
-    } catch (error) {
+    } catch (error: any) { // error 타입 명시
       console.error('로그아웃 실패:', error);
       setError(error.message);
     }
@@ -84,4 +98,10 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
