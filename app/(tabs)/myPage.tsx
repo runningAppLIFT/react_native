@@ -15,7 +15,7 @@ const initialPosts: Post[] = [
   { id: '3', title: '세 번째 게시글', content: '이것은 세 번째 게시글의 내용입니다.' },
 ];
 
-export default function Community() {
+export default function MypageScreen() {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
 
   const renderItem = ({ item }: { item: Post }) => (
@@ -28,7 +28,7 @@ export default function Community() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.headerImageContainer}>
-        <ThemedText type="title" style={styles.headerText}>커뮤니티</ThemedText>
+        <ThemedText type="title" style={styles.headerText}>마이 페이지</ThemedText>
       </ThemedView>
       <FlatList
         data={posts}

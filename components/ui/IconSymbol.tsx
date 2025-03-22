@@ -14,6 +14,8 @@ const MAPPING = {
   'play.fill': 'play-arrow',     
   'pause.fill': 'pause',
   'stop.fill': 'stop',
+  'person.3': 'group',                   // 세 사람 (커뮤니티)
+  'bubble.left.and.bubble.right': 'forum' // 대화와 소통
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
