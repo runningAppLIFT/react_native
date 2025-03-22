@@ -1,19 +1,19 @@
-// This file is a fallback for using MaterialIcons on Android and web.
-
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolWeight } from 'expo-symbols';
+import { SymbolView, SymbolWeight } from 'expo-symbols';
 import React from 'react';
-import { OpaqueColorValue, StyleProp, ViewStyle } from 'react-native';
+import { OpaqueColorValue, Platform, StyleProp, ViewStyle } from 'react-native';
 
-// Add your SFSymbol to MaterialIcons mappings here.
+// SF Symbols와 Material Icons 매핑
 const MAPPING = {
-  // See MaterialIcons here: https://icons.expo.fyi
-  // See SF Symbols in the SF Symbols app on Mac.
   'house.fill': 'home',
-  'paperplane.fill': 'send',
+  // 'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  'map.fill' : 'map'
+  'map.fill': 'map',
+  'figure.run': 'directions-run', 
+  'play.fill': 'play-arrow',     
+  'pause.fill': 'pause',
+  'stop.fill': 'stop',
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
@@ -24,15 +24,14 @@ const MAPPING = {
 export type IconSymbolName = keyof typeof MAPPING;
 
 /**
- * An icon component that uses native SFSymbols on iOS, and MaterialIcons on Android and web. This ensures a consistent look across platforms, and optimal resource usage.
- *
- * Icon `name`s are based on SFSymbols and require manual mapping to MaterialIcons.
+ * 플랫폼에 따라 SF Symbols (iOS) 또는 Material Icons (Android/web)를 사용하는 아이콘 컴포넌트
  */
 export function IconSymbol({
   name,
   size = 24,
   color,
   style,
+  weight,
 }: {
   name: IconSymbolName;
   size?: number;
@@ -40,5 +39,25 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  // iOS에서는 SF Symbols 사용, 그 외에는 Material Icons 사용
+  if (Platform.OS === 'ios') {
+    return (
+      <SymbolView
+        name={name}
+        size={size}
+        tint={color}
+        style={style}
+        weight={weight}
+      />
+    );
+  }
+
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={MAPPING[name]}
+      style={style}
+    />
+  );
 }
