@@ -74,20 +74,25 @@ export default function RunScreen() {
     setIsPaused(!isPaused);
   };
 
-  // 달리기 종료 함수
-  const stopRunning = () => {
-    if (watchId !== null) {
-      const { Location } = require('expo-location');
-      Location.stopLocationUpdatesAsync(watchId);
-      setWatchId(null);
-    }
-    if (!isPaused) {
-      // 종료 시 최종 경과 시간 계산
-      setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
-    }
-    setIsRunning(false);
-    alert(`달리기 종료!\n시간: ${formatTime(elapsedTime)}\n거리: ${calculateDistance(path).toFixed(2)} km`);
-  };
+// 달리기 종료 함수
+const stopRunning = () => {
+  if (watchId !== null) {
+    const { Location } = require('expo-location');
+    Location.stopLocationUpdatesAsync(watchId);
+    setWatchId(null);
+  }
+  if (!isPaused) {
+    // 종료 시 최종 경과 시간 계산
+    setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
+  }
+  setIsRunning(false);
+  alert(`달리기 종료!\n시간: ${formatTime(elapsedTime)}\n거리: ${calculateDistance(path).toFixed(2)} km`);
+  
+  // 초기화: 경로와 경과 시간 리셋
+  setPath([]);           // 경로 초기화
+  setElapsedTime(0);     // 경과 시간 초기화
+  setStartTime(null);    // 시작 시간 초기화 (선택적)
+};
 
   // 경과 시간 계산을 위한 useEffect 수정
 useEffect(() => {
