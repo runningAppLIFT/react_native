@@ -54,7 +54,8 @@ export default function MapScreen() {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/courses/save-points', {
+      const response = await fetch('http://10.0.2.2:8080/courses/save-points', {
+      // const response = await fetch('http://localhost:8080/courses/save-points', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
