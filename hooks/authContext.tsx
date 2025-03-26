@@ -26,7 +26,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const profile = await getProfile();
         // 백엔드에서 사용자 정보 조회
-        const response = await fetch('http://localhost:8080/auth/me', {
+        const response = await fetch('http://10.0.2.2:8080/auth/me', //안드로이드
+        // const response = await fetch('http://localhost:8080/auth/me', 아이폰
+          {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -53,7 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const profile = await getProfile();
 
       // 백엔드로 kakao_id와 nickname 전송
-      const response = await fetch('http://localhost:8080/auth/signup', {
+      const response = await fetch('http://10.0.2.2:8080/auth/signup', {
+      // const response = await fetch('http://localhost:8080/auth/signup',{ //아이폰
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
