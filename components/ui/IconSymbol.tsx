@@ -15,7 +15,11 @@ const MAPPING = {
   'pause.fill': 'pause',
   'stop.fill': 'stop',
   'person.3': 'group',                   // 세 사람 (커뮤니티)
-  'bubble.left.and.bubble.right': 'forum' // 대화와 소통
+  'bubble.left.and.bubble.right': 'forum', // 대화와 소통
+  'a.magnify': 'search' ,// 돋보기 (검색)
+  'thumb-up-off-alt': 'thumb-up-off-alt', 
+  'chat-bubble-outline': 'chat-bubble-outline', // 채팅 말풍선
+
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
