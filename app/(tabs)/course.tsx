@@ -21,7 +21,9 @@ interface Region extends Coordinate {
 }
 
 interface Course {
-  course_id: number;
+  id: number;
+  title: string;
+  distance: number;
   points: Coordinate[];
 }
 
@@ -53,6 +55,9 @@ export default function MapScreen() {
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');       // 코스 제목
   const [courseDescription, setCourseDescription] = useState(''); // 코스 설명
+
+  // 저장 완료 모달 관련 상태
+  const [isCompletedModalVisible, setIsCompletedModalVisible] = useState(false);
 
   const { points, setPoints, isAddingPoints, handleAddPointsToggle, handleRemoveLastPoint, handleMapPress } = usePoints();
   const { courses, setCourses, isUserCoursesVisible, isNearbyCoursesVisible, isLoading, handleToggleUserCourses, handleToggleNearbyCourses } = useCourses(user);
@@ -89,15 +94,16 @@ export default function MapScreen() {
     };
 
     try {
-      const response = await fetch('http://10.0.2.2:8080/courses/save-points', {
-      // const response = await fetch('http://localhost:8080/courses/save-points', {
+      const response = await fetch(`http://localhost:8080/courses/saves/${user.userId}`, {
+      // const response = await fetch(`https://lift-back-nest-693289168050.us-central1.run.app/courses/saves/${user.userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error(`Failed to save points: ${await response.text()}`);
-      alert('경로가 저장되었습니다!');
+      setIsCompletedModalVisible(true);
+
       setPoints([]);
       setCourses([]);
       setCourseTitle('');
@@ -202,7 +208,16 @@ export default function MapScreen() {
             </View>
           )}
         </View>
-        {/* <NearbyCoursesBottomSheet /> 근처코스 누를시 작동 */}
+        {/* <NearbyCoursesBottomSheet
+          isVisible={isUserCoursesVisible || isNearbyCoursesVisible}
+          courses={courses}
+          onClose={() => {
+            // 코스 목록을 닫을 때 관련 상태들을 초기화하거나 토글하는 로직 추가
+            handleToggleUserCourses();
+            region && handleToggleNearbyCourses(region);
+          }}
+          handleSave={handleSavePoints}
+        /> */}
       </View>
 
       {/* 저장 모달 - 이후 컴포넌트로 수정 */}
@@ -251,7 +266,27 @@ export default function MapScreen() {
         </View>
       </Modal>
 
-     
+      {/* 완료 모달 - 이후 컴포넌트로 수정 */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isCompletedModalVisible}
+        onRequestClose={() => setIsCompletedModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.completeModalView}>
+            <Text style={styles.completeText}>저장 완료</Text>
+            <Text style={styles.completeText}>코스가 저장되었습니다!</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.modalSaveButton]}
+            onPress={() => setIsCompletedModalVisible(false)}
+          >
+            <Text style={styles.modalButtonText}>확인</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    
     </View>
   );
 }
@@ -384,4 +419,18 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: '#333',
   },
+  completeModalView: {
+    width: '70%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  completeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2196F3',
+  },
+
 });
