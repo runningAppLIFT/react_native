@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
 import { useAuth } from '@/hooks/authContext';
 import { useLocation } from '../../hooks/useLocation';
 import { usePoints } from '../../hooks/useMapPoints';
 import { useCourses } from '../../hooks/useCourses';
+import NearbyCoursesBottomSheet from '@/components/NearbyCoursesBottomSheet';
+import { getDistance } from 'geolib'; 
 
 // 타입 정의
 interface Coordinate {
@@ -27,18 +29,49 @@ interface User {
   userId: string;
 }
 
+// 포인트 배열로 총 거리를 계산하는 함수 (미터 단위)
+const getTotalDistance = (points: Coordinate[]): number => {
+  let distance = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    distance += getDistance(points[i], points[i + 1]);
+  }
+  return distance;
+};
+
+
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
   const { user } = useAuth();
+
+
   
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const [isMoreOptionsVisible, setIsMoreOptionsVisible] = useState(false);
   const [isEditOptionsVisible, setIsEditOptionsVisible] = useState(false);
 
+  // 저장 모달 창을 위한 상태 추가
+  const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+  const [courseTitle, setCourseTitle] = useState('');       // 코스 제목
+  const [courseDescription, setCourseDescription] = useState(''); // 코스 설명
+
   const { points, setPoints, isAddingPoints, handleAddPointsToggle, handleRemoveLastPoint, handleMapPress } = usePoints();
   const { courses, setCourses, isUserCoursesVisible, isNearbyCoursesVisible, isLoading, handleToggleUserCourses, handleToggleNearbyCourses } = useCourses(user);
 
   useLocation(setRegion);
+
+  const openSaveModal = () => {
+    // 저장할 포인트가 있는지 체크 후 모달 오픈
+    if (points.length === 0) {
+      alert('저장할 포인트가 없습니다.');
+      return;
+    }
+    if (!user?.userId) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    setIsSaveModalVisible(true);
+  };
+
 
   const handleSavePoints = async () => {
     if (points.length === 0 || !user?.userId) {
@@ -48,6 +81,8 @@ export default function MapScreen() {
 
     const payload = {
       user_id: parseInt(user.userId, 10),
+      title: courseTitle, 
+      description: courseDescription,
       content: 'Sample route',
       points,
       status: 'active',
@@ -65,10 +100,17 @@ export default function MapScreen() {
       alert('경로가 저장되었습니다!');
       setPoints([]);
       setCourses([]);
+      setCourseTitle('');
+      setCourseDescription('');
+      setIsSaveModalVisible(false);
     } catch (error: any) { // error 타입 명시
       alert(`경로 저장에 실패했습니다: ${error.message}`);
     }
   };
+
+    // 총 거리 (미터 단위)를 계산하고 km 단위로 표시
+    const totalDistance = points.length > 1 ? getTotalDistance(points) : 0;
+    const distanceInKm = (totalDistance / 1000).toFixed(2); // km 단위, 소수점 2자리
 
   return (
     <View style={styles.container}>
@@ -127,7 +169,7 @@ export default function MapScreen() {
               <TouchableOpacity style={styles.optionButton} onPress={handleRemoveLastPoint}>
                 <Text style={styles.optionButtonText}>삭제</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.optionButton} onPress={handleSavePoints}>
+              <TouchableOpacity style={styles.optionButton} onPress={openSaveModal}>
                 <Text style={styles.optionButtonText}>저장</Text>
               </TouchableOpacity>
             </View>
@@ -160,7 +202,56 @@ export default function MapScreen() {
             </View>
           )}
         </View>
+        {/* <NearbyCoursesBottomSheet /> 근처코스 누를시 작동 */}
       </View>
+
+      {/* 저장 모달 - 이후 컴포넌트로 수정 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSaveModalVisible}
+        onRequestClose={() => setIsSaveModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.saveModalView}>
+            <Text style={styles.modalTitle}>코스 등록</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="코스 제목을 입력하세요"
+              value={courseTitle}
+              onChangeText={setCourseTitle}
+            />
+             <Text style={styles.distanceText}>
+              총 거리: {distanceInKm} km
+            </Text>
+
+            <TextInput
+              style={[styles.modalInput, { height: 80 }]}
+              placeholder="코스 설명을 입력하세요"
+              multiline
+              value={courseDescription}
+              onChangeText={setCourseDescription}
+            />
+            <View style={styles.modalButtonGroup}>
+            <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSavePoints}
+              >
+                <Text style={styles.modalButtonText}>저장</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setIsSaveModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>취소</Text>
+              </TouchableOpacity>
+           
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+     
     </View>
   );
 }
@@ -236,6 +327,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     textAlign: 'center',
+    color: '#333',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveModalView: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  modalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 15,
+  },
+  modalButtonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  modalCancelButton: {
+    backgroundColor: '#ccc',
+  },
+  modalSaveButton: {
+    backgroundColor: '#2196F3',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  distanceText: {
+    fontSize: 16,
+    marginBottom: 15,
     color: '#333',
   },
 });

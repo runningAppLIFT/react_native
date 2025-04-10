@@ -57,21 +57,19 @@ const navigation = useNavigation();
     <ThemedView style={styles.container}>
       <ThemedView style={styles.headerImageContainer}>
         <ThemedText type="title" style={styles.headerText}>자유게시판</ThemedText>
-        <TouchableOpacity onPress={() => {/* 게시물 작성 기능 구현 */}}>
-        <Text style={styles.btnplus}>+</Text> 
+        <TouchableOpacity style={styles.btnplus} onPress={() => {/* 게시물 작성 기능 구현 */}}>
+        <Text style={styles.btnplustext}>+</Text> 
         </TouchableOpacity>
-       
       </ThemedView>
 
       <SearchBar value={text} onChangeText={setText} />
-      
-        
+
         <ThemedView style={styles.noticeContainer}>
   <ThemedText style={styles.noticeTop}>공지사항</ThemedText>
 
   {/* <TouchableOpacity onPress={() => navigation.push('details/noticeDetail', { id: notice.id })}> */}
-  <TouchableOpacity style={styles.notice} >
-  <Swiper
+  <View style={styles.notice} >
+    <Swiper
       autoplay
       autoplayTimeout={4}
       showsPagination={true} 
@@ -82,27 +80,34 @@ const navigation = useNavigation();
       height={60} // 슬라이드 높이
       paginationStyle={{ bottom: -10 }}
     >
-      <View>
+      <TouchableOpacity>
         <ThemedText style={styles.noticetitle}>게시판 이용 안내사항</ThemedText>
         <ThemedText>2025.03.28</ThemedText>
-      </View>
-      <View>
+      </TouchableOpacity>
+
+      <TouchableOpacity>
         <ThemedText style={styles.noticetitle}>새로운 기능이 추가되었습니다</ThemedText>
         <ThemedText>2025.03.30</ThemedText>
-      </View>
-      <View>
+      </TouchableOpacity>
+
+      <TouchableOpacity>
         <ThemedText style={styles.noticetitle}>점검 안내: 4월 1일 새벽 2시</ThemedText>
         <ThemedText>2025.03.31</ThemedText>
-      </View>
+      </TouchableOpacity>
     </Swiper>
-  </TouchableOpacity>
-</ThemedView>
+  </View>
+  </ThemedView>
       <FlatList
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.boardContainer}
       />
+
+      <TouchableOpacity style={styles.circleButton} onPress={() => navigation.navigate('AddPost')}>
+        <Text style={styles.circlebtntext}>+</Text>
+      </TouchableOpacity>
+
     </ThemedView>
   );
 }
@@ -142,9 +147,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     top: 10,
-    fontSize: 56,
-    color: '#000',
+    
   },
+
+  btnplustext:{
+    fontSize:54,
+    fontWeight: 'bold',
+    color: '#fff'
+  },
+
   inputContainer: {
     flexDirection: 'row',
     margin: 10,
@@ -194,5 +205,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     borderRadius: 10,
+  },
+  circleButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  circlebtntext: {
+    fontSize: 30,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

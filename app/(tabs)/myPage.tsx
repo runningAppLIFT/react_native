@@ -2,6 +2,7 @@ import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Text } from 'react-native';
 
 type Post = {
   id: string;
@@ -30,13 +31,17 @@ export default function MypageScreen() {
       <ThemedView style={styles.headerImageContainer}>
         <ThemedText type="title" style={styles.headerText}>마이 페이지</ThemedText>
       </ThemedView>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.boardContainer}
-      />
-      
+      <ThemedView style={styles.myPageContainer}> 
+          <TouchableOpacity onPress={() => {/* 내 정보 수정 기능 구현 */}}>
+            <Text style={styles.textStyle}>내 정보</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {/* 내 코스 관리 기능 구현 */}}>
+            <Text style={styles.textStyle}>내 코스관리</Text>
+          </TouchableOpacity>  
+          <TouchableOpacity onPress={() => {/* 내 작성글 관리 기능 구현 */}}>
+            <Text style={styles.textStyle}>내 작성글 관리</Text>
+          </TouchableOpacity>
+      </ThemedView>
     </ThemedView>
   );
 }
@@ -57,8 +62,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  boardContainer: {
-    padding: 16,
+  myPageContainer: {
+    flex: 1,
+    padding: 25,
+    
+    
+
+  },
+  textStyle: {
+    marginBottom: 24,
+    fontSize: 24,
+    padding: 20, 
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    backgroundColor: '#eee',
+    borderRadius: 10,
   },
   postContainer: {
     padding: 16,
