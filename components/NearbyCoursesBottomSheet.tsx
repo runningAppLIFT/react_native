@@ -5,10 +5,11 @@ import HorizontalPagination from './HorizontalPagination';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 interface Course {
-  id: number;
+  course_id : number;
   title: string;
   distance: string;
-  // 필요한 경우 다른 프로퍼티도 정의
+  description?: string;
+  points?: { latitude: number; longitude: number }[];
 }
 
 interface NearbyCoursesBottomSheetProps {
@@ -18,11 +19,11 @@ interface NearbyCoursesBottomSheetProps {
   handleSave: (course: Course) => void;
 }
 // 더미 코스 데이터
-const mockCourses: Course[] = Array.from({ length: 12 }, (_, i) => ({
-  id: i + 1,
-  title: `코스 ${i + 1}`,
-  distance: `${(Math.random() * 2 + 1).toFixed(2)} km`,
-}));
+// const mockCourses: Course[] = Array.from({ length: 12 }, (_, i) => ({
+//   id: i + 1,
+//   title: `코스 ${i + 1}`,
+//   distance: `${(Math.random() * 2 + 1).toFixed(2)} km`,
+// }));
 
 export default function NearbyCoursesBottomSheet({
   isVisible,
@@ -48,12 +49,13 @@ export default function NearbyCoursesBottomSheet({
         <View style={styles.container}>
           <Text style={styles.title}>내 주변 코스</Text>
           <HorizontalPagination
-            data={mockCourses}
+            data={courses}
             itemsPerPage={4}
             renderItem={({ item }: { item: Course }) => (
               <View style={styles.card}>
                 <Text style={styles.courseTitle}>{item.title}</Text>
                 <Text style={styles.distance}>거리: {item.distance}</Text>
+                <Text style={styles.distance}>{item.description}</Text>
                 <TouchableOpacity style={styles.saveButton} onPress={() => handleSave(item)}>
                   <Text style={styles.saveText}>저장</Text>
                 </TouchableOpacity>

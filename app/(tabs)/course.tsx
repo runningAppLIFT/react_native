@@ -9,6 +9,9 @@ import { useCourses } from '../../hooks/useCourses';
 import NearbyCoursesBottomSheet from '@/components/NearbyCoursesBottomSheet';
 import { getDistance } from 'geolib'; 
 
+
+
+
 // 타입 정의
 interface Coordinate {
   latitude: number;
@@ -20,12 +23,6 @@ interface Region extends Coordinate {
   longitudeDelta: number;
 }
 
-interface Course {
-  id: number;
-  title: string;
-  distance: number;
-  points: Coordinate[];
-}
 
 interface User {
   userId: string;
@@ -41,11 +38,11 @@ const getTotalDistance = (points: Coordinate[]): number => {
 };
 
 
+
+
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
   const { user } = useAuth();
-
-
   
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const [isMoreOptionsVisible, setIsMoreOptionsVisible] = useState(false);
@@ -117,6 +114,9 @@ export default function MapScreen() {
     // 총 거리 (미터 단위)를 계산하고 km 단위로 표시
     const totalDistance = points.length > 1 ? getTotalDistance(points) : 0;
     const distanceInKm = (totalDistance / 1000).toFixed(2); // km 단위, 소수점 2자리
+
+   
+    
 
   return (
     <View style={styles.container}>
@@ -208,16 +208,17 @@ export default function MapScreen() {
             </View>
           )}
         </View>
-        {/* <NearbyCoursesBottomSheet
+
+        <NearbyCoursesBottomSheet
           isVisible={isUserCoursesVisible || isNearbyCoursesVisible}
-          courses={courses}
+          courses={isUserCoursesVisible ? courses : []} 
           onClose={() => {
             // 코스 목록을 닫을 때 관련 상태들을 초기화하거나 토글하는 로직 추가
             handleToggleUserCourses();
             region && handleToggleNearbyCourses(region);
           }}
           handleSave={handleSavePoints}
-        /> */}
+        />
       </View>
 
       {/* 저장 모달 - 이후 컴포넌트로 수정 */}

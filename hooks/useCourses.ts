@@ -117,8 +117,11 @@ export const useCourses = (user: { userId: string } | null) => {
   };
 };
 
-interface Course {
+export interface Course {
   course_id: number;
+  title: string;
+  distance: string;
+  description?: string;
   points: Coordinate[];
 }
 
