@@ -64,9 +64,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="running"
+        name="Running"
         options={{
-          title: 'Run',
+          title: 'Running',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.run" color={color} />,
         }}
       />
