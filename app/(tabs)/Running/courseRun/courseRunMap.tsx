@@ -2,32 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
-import { useLocation } from '../../../../hooks/useLocation';
+
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import RunModal from '@/components/RunModal';
+import { useLocation } from '@/hooks/useLocation';
 
-// 타입 정의: 좌표와 지도 영역에 대한 인터페이스
+// 좌표 인터페이스 정의
 interface Coordinate {
   latitude: number;
   longitude: number;
 }
 
+// 지도 영역 인터페이스 정의
 interface Region extends Coordinate {
   latitudeDelta: number;
   longitudeDelta: number;
 }
 
 export default function FreeRun() {
-  const router = useRouter(); // 내비게이션용 라우터
-  const { region, setRegion } = useMapStore(); // Zustand 스토어에서 지도 영역 상태와 설정 함수 가져오기
-  const [isRunning, setIsRunning] = useState(false); // 달리기 진행 상태 관리
-  const [isPaused, setIsPaused] = useState(false); // 일시 정지 상태 관리
-  const [path, setPath] = useState<Coordinate[]>([]); // 이동 경로를 저장하는 배열
-  const [startTime, setStartTime] = useState<number | null>(null); // 달리기 시작 시간 (밀리초)
-  const [elapsedTime, setElapsedTime] = useState(0); // 경과 시간 (초 단위)
-  const [watchId, setWatchId] = useState<number | null>(null); // 위치 추적 작업의 ID
+  const router = useRouter();
+  const { region, setRegion } = useMapStore();
+  const [isRunning, setIsRunning] = useState(false); // 달리기 상태
+  const [isPaused, setIsPaused] = useState(false); // 일시정지 상태
+  const [path, setPath] = useState<Coordinate[]>([]); // 이동 경로
+  const [startTime, setStartTime] = useState<number | null>(null); // 시작 시간
+  const [elapsedTime, setElapsedTime] = useState(0); // 경과 시간
+  const [watchId, setWatchId] = useState<number | null>(null); // 위치 추적 ID
+  const [showModal, setShowModal] = useState(false); // 모달 표시 여부
+  const [pace, setPace] = useState(0); // 평균 페이스
+  const [currentPace, setCurrentPace] = useState(0); // 현재 페이스
+  const [isLocked, setIsLocked] = useState(false); // 잠금 상태
 
-  // 현재 위치를 가져와 지도 영역을 초기화
+  // 위치 정보 가져오기
   useLocation(setRegion);
 
   // 달리기 시작 함수
@@ -37,6 +44,7 @@ export default function FreeRun() {
     setPath([]);
     setStartTime(Date.now());
     setElapsedTime(0);
+    setShowModal(true);
 
     const { Location } = require('expo-location');
     const id = await Location.watchPositionAsync(
@@ -51,7 +59,24 @@ export default function FreeRun() {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
           };
-          setPath((prev) => [...prev, newCoord]);
+          setPath((prev) => {
+            const updatedPath = [...prev, newCoord];
+            const distance = calculateDistance(updatedPath);
+            if (distance > 0) {
+              const avgPace = (elapsedTime / distance) * 1000;
+              setPace(Math.floor(avgPace));
+            }
+            if (updatedPath.length >= 2) {
+              const lastTwo = updatedPath.slice(-2);
+              const segmentDistance = calculateDistance(lastTwo);
+              const segmentTime = 400 / 1000;
+              if (segmentDistance > 0) {
+                const currPace = (segmentTime / segmentDistance) * 1000;
+                setCurrentPace(Math.floor(currPace));
+              }
+            }
+            return updatedPath;
+          });
           setRegion({
             latitude: newCoord.latitude,
             longitude: newCoord.longitude,
@@ -64,7 +89,7 @@ export default function FreeRun() {
     setWatchId(id);
   };
 
-  // 일시 정지/재개 함수
+  // 일시정지/재개 토글 함수
   const togglePause = () => {
     if (!isPaused) {
       setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
@@ -85,19 +110,27 @@ export default function FreeRun() {
       setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
     }
     setIsRunning(false);
+    setShowModal(false);
     alert(
       `달리기 종료!\n시간: ${formatTime(elapsedTime)}\n거리: ${calculateDistance(
         path
       ).toFixed(2)} km`
     );
 
-    // 초기화: 경로와 경과 시간 리셋
     setPath([]);
     setElapsedTime(0);
     setStartTime(null);
+    setPace(0);
+    setCurrentPace(0);
+    setIsLocked(false);
   };
 
-  // 경과 시간 계산을 위한 useEffect
+  // 잠금 상태 토글 함수
+  const toggleLock = () => {
+    setIsLocked((prev) => !prev);
+  };
+
+  // 경과 시간 업데이트
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isRunning && startTime && !isPaused) {
@@ -112,14 +145,14 @@ export default function FreeRun() {
     };
   }, [isRunning, startTime, isPaused]);
 
-  // 시간 포맷팅 함수: 초를 MM:SS 형식으로 변환
+  // 시간 포맷팅 함수
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 이동 거리 계산 함수: Haversine 공식 사용
+  // 거리 계산 함수
   const calculateDistance = (coords: Coordinate[]) => {
     if (coords.length < 2) return 0;
     let totalDistance = 0;
@@ -142,7 +175,7 @@ export default function FreeRun() {
 
   return (
     <View style={styles.container}>
-      {/* 지도 컴포넌트 */}
+      {/* 지도 표시 */}
       <MapView
         style={styles.map}
         showsUserLocation
@@ -152,11 +185,7 @@ export default function FreeRun() {
         }
       >
         {path.length > 0 && (
-          <Polyline
-            coordinates={path}
-            strokeColor="#FF0000"
-            strokeWidth={3}
-          />
+          <Polyline coordinates={path} strokeColor="#FF0000" strokeWidth={3} />
         )}
         {region && !isRunning && (
           <Marker
@@ -169,45 +198,55 @@ export default function FreeRun() {
         )}
       </MapView>
 
-      {/* "이전" 버튼 */}
+      {/* 뒤로 가기 버튼 */}
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
+        disabled={isLocked}
       >
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
 
-      {/* 달리기 정보 및 버튼 오버레이 */}
-      <View style={styles.buttonWrapper}>
-        <View style={styles.overlay}>
-          <Text style={styles.timerText}>
-            시간: {formatTime(elapsedTime)} | 거리: {calculateDistance(path).toFixed(2)} km
-          </Text>
-        </View>
-        {/* 일시정지 버튼 */}
+      {/* 러닝 정보 모달 */}
+      <RunModal
+        visible={showModal}
+        elapsedTime={elapsedTime}
+        distance={calculateDistance(path)}
+        pace={pace}
+        currentPace={currentPace}
+        toggleLock={toggleLock}
+        isPaused={isPaused} // 일시정지 상태 전달
+        stopRunning={stopRunning} // 종료 함수 전달
+      />
+
+      {/* 버튼 그룹 (종료 버튼 제거) */}
+      <View style={[styles.buttonWrapper, { zIndex: 1000 }]}>
         {isRunning && !isPaused && (
-          <TouchableOpacity style={styles.button} onPress={togglePause}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={togglePause}
+            disabled={isLocked}
+          >
             <Text style={styles.buttonText}>일시정지</Text>
           </TouchableOpacity>
         )}
 
-        {/* 다시 시작 버튼 */}
         {isRunning && isPaused && (
-          <TouchableOpacity style={styles.button} onPress={togglePause}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={togglePause}
+            disabled={isLocked}
+          >
             <Text style={styles.buttonText}>다시 시작</Text>
           </TouchableOpacity>
         )}
 
-        {/* 종료 버튼 */}
-        {isRunning && (
-          <TouchableOpacity style={[styles.button, { marginTop: 10 }]} onPress={stopRunning}>
-            <Text style={styles.buttonText}>종료</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* 시작 버튼 */}
         {!isRunning && (
-          <TouchableOpacity style={styles.button} onPress={startRunning}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={startRunning}
+            disabled={isLocked}
+          >
             <Text style={styles.buttonText}>시작</Text>
           </TouchableOpacity>
         )}
@@ -216,19 +255,18 @@ export default function FreeRun() {
   );
 }
 
-// 스타일 정의
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
   },
   map: {
-    ...StyleSheet.absoluteFillObject, // 지도를 전체 화면으로 채움
+    ...StyleSheet.absoluteFillObject,
   },
   backButton: {
     position: 'absolute',
-    top: 40, // 상단에서 40px 아래
-    left: 15, // 왼쪽에서 15px
+    top: 40,
+    left: 15,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -240,22 +278,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
-    zIndex: 10, // 지도 위에 표시되도록
-  },
-  overlay: {
-    position: 'absolute',
-    bottom: 120,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  timerText: {
-    fontSize: 18,
-    color: '#fff',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+    zIndex: 1000,
   },
   buttonWrapper: {
     flexDirection: 'column',
