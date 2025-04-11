@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
-import { useLocation } from '../../../hooks/useLocation';
+import { useLocation } from '../../../../hooks/useLocation';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
