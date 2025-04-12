@@ -9,6 +9,9 @@ import { useCourses } from '../../hooks/useCourses';
 import NearbyCoursesBottomSheet from '@/components/NearbyCoursesBottomSheet';
 import { getDistance } from 'geolib'; 
 
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
 
 
@@ -91,8 +94,7 @@ export default function MapScreen() {
     };
 
     try {
-      const response = await fetch(`http://localhost:8080/courses/saves/${user.userId}`, {
-      // const response = await fetch(`https://lift-back-nest-693289168050.us-central1.run.app/courses/saves/${user.userId}`, {
+      const response = await fetch(`${API_URL}/courses/saves/${user.userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

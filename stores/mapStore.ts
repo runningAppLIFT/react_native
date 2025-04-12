@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { Building } from '@/types/building';
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
 
 type MapStore = {
@@ -21,7 +24,7 @@ type MapStore = {
     fetchPolygons: async (latitude, longitude) => {
       try {
         const response = await fetch(
-          `https://nest-practice-88013499747.asia-northeast2.run.app/bldg/nearby?x=${longitude}&y=${latitude}&radius=200`
+          `${API_URL}/bldg/nearby?x=${longitude}&y=${latitude}&radius=200`
         );
         const data: Building[] = await response.json();
  

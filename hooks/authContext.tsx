@@ -1,6 +1,11 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { getProfile, login as kakaoLogin, logout as kakaoLogout } from '@react-native-seoul/kakao-login';
 
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
+
+
 // AuthContext의 타입 정의
 interface AuthContextType {
   user: { userId: string; kakao_id: number; nickname: string } | null; // 백엔드에서 반환되는 user 객체에 맞게 정의
@@ -26,8 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const profile = await getProfile();
         // 백엔드에서 사용자 정보 조회
-        const response = await fetch('http://10.0.2.2:8080/auth/me', //안드로이드
-        // const response = await fetch('http://localhost:8080/auth/me', 아이폰
+        const response = await fetch(`${API_URL}/auth/me`, 
           {
           method: 'GET',
           headers: {
@@ -55,8 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const profile = await getProfile();
 
       // 백엔드로 kakao_id와 nickname 전송
-      const response = await fetch('http://10.0.2.2:8080/auth/signup', {
-      // const response = await fetch('http://localhost:8080/auth/signup',{ //아이폰
+      const response = await fetch(`${API_URL}/auth/signup`,{ 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

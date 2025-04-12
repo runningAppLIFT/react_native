@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
 export const useCourses = (user: { userId: string } | null) => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -25,8 +28,7 @@ export const useCourses = (user: { userId: string } | null) => {
 
     setIsLoading(true);
     try {
-      // const response = await fetch(`http://10.0.2.2:8080/courses/user/${user.userId}`, {
-      const response = await fetch(`http://localhost:8080/courses/user/${user.userId}`, {
+      const response = await fetch(`${API_URL}/courses/user/${user.userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -74,8 +76,7 @@ export const useCourses = (user: { userId: string } | null) => {
     const { latitude, longitude } = region || {};
     try {
       const response = await fetch(
-        `http://10.0.2.2:8080/courses/nearby?latitude=${latitude}&longitude=${longitude}&radius=1`,
-        // `http://localhost:8080/courses/nearby?latitude=${latitude}&longitude=${longitude}&radius=1`,
+        `${API_URL}/courses/nearby?latitude=${latitude}&longitude=${longitude}&radius=1`,
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
 
