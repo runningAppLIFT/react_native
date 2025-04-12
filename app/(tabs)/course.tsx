@@ -86,21 +86,24 @@ export default function MapScreen() {
 
     const payload = {
       user_id: parseInt(user.userId, 10),
-      title: courseTitle, 
-      description: courseDescription,
-      content: 'Sample route',
+      course_title: courseTitle,      
+      course_content: courseDescription, 
       points,
       status: 'active',
     };
 
     try {
-      const response = await fetch(`${API_URL}/courses/saves/${user.userId}`, {
+      const response = await fetch(`${API_URL}/courses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error(`Failed to save points: ${await response.text()}`);
+      const result = await response.text(); // or response.json() if you expect JSON
+
+      if (!response.ok) throw new Error(`(${response.status}) ${result}`);
+
+      console.log('서버 응답:', result);
       setIsCompletedModalVisible(true);
 
       setPoints([]);
