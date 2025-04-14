@@ -12,6 +12,7 @@ const RunningLayout = () => {
       <Stack.Screen name="freeRun" />
       <Stack.Screen name="courseRun/index" />
       <Stack.Screen name="courseRun/courseRunMap" />
+      <Stack.Screen name="detailRun" />
     </Stack>
   );
 };

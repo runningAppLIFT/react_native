@@ -98,31 +98,48 @@ export default function FreeRun() {
     setIsPaused(!isPaused);
   };
 
-  // 달리기 종료 함수
-  const stopRunning = () => {
-    if (watchId !== null) {
-      const { Location } = require('expo-location');
-      Location.stopLocationUpdatesAsync(watchId);
-      setWatchId(null);
-    }
-    if (!isPaused) {
-      setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
-    }
-    setIsRunning(false);
-    setShowModal(false);
-    alert(
-      `달리기 종료!\n시간: ${formatTime(elapsedTime)}\n거리: ${calculateDistance(
-        path
-      ).toFixed(2)} km`
-    );
 
-    setPath([]);
-    setElapsedTime(0);
-    setStartTime(null);
-    setPace(0);
-    setCurrentPace(0);
-    setIsLocked(false);
-  };
+
+// 달리기 종료 함수
+const stopRunning = () => {
+  if (watchId !== null) {
+    const { Location } = require('expo-location');
+    Location.stopLocationUpdatesAsync(watchId);
+    setWatchId(null);
+  }
+  if (!isPaused) {
+    setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
+  }
+  setIsRunning(false);
+  setShowModal(false);
+
+  // 계산된 데이터
+  const distance = calculateDistance(path).toFixed(2); // 거리(km)
+  const formattedTime = formatTime(elapsedTime); // 시간 (hh:mm)
+  const avgPace = `${Math.floor(pace / 60)}'${pace % 60}"`; // 페이스
+  const date = new Date().toLocaleString(); // 현재 날짜
+
+  // 기록 페이지로 이동
+  router.push({
+    pathname: '/(tabs)/Running/detailRun',
+    params: {
+      distance: distance,
+      time: formattedTime,
+      pace: avgPace,
+      path: JSON.stringify(path), // 배열을 문자열로 변환해 전달
+      date: date,
+    },
+  });
+
+  // 상태 초기화
+  setPath([]);
+  setElapsedTime(0);
+  setStartTime(null);
+  setPace(0);
+  setCurrentPace(0);
+  setIsLocked(false);
+};
+
 
   // 잠금 상태 토글 함수
   const toggleLock = () => {
