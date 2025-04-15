@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, Button, Alert } from 'react-native'; // Alert 추가
+import React, { useEffect } from 'react';
+import { Platform, Button, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuth } from '@/hooks/authContext';
 import { HapticTab } from '@/components/HapticTab';
@@ -8,11 +8,12 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const pathname = usePathname();
   const { user, signOut } = useAuth();
   const isLoggedIn = !!user;
 
@@ -48,6 +49,7 @@ export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
+        initialRouteName="index"
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: true,
@@ -103,7 +105,6 @@ export default function TabLayout() {
           }}
           listeners={{
             tabPress: (e) => {
-              // 로그인 안 되어 있으면 이벤트 취소
               if (!handleMyPagePress()) {
                 e.preventDefault();
               }

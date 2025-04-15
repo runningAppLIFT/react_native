@@ -1,14 +1,13 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { getProfile, login as kakaoLogin, logout as kakaoLogout } from '@react-native-seoul/kakao-login';
-
 import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
-
 // AuthContext의 타입 정의
 interface AuthContextType {
-  user: { userId: string; kakao_id: number; nickname: string } | null; // 백엔드에서 반환되는 user 객체에 맞게 정의
+  user: { userId: string; kakao_id: number; nickname: string; createdAt?: string } | null;
+  setUser: (user: { userId: string; kakao_id: number; nickname: string; createdAt?: string } | null) => void;
   signInWithKakao: () => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
@@ -17,35 +16,33 @@ interface AuthContextType {
 // createContext에 타입과 기본값 제공
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  setUser: () => {},
   signInWithKakao: async () => {},
   signOut: async () => {},
   error: null,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<{ userId: string; kakao_id: number; nickname: string } | null>(null);
+  const [user, setUser] = useState<{ userId: string; kakao_id: number; nickname: string; createdAt?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
         const profile = await getProfile();
-        // 백엔드에서 사용자 정보 조회
-        const response = await fetch(`${API_URL}/auth/me`, 
-          {
+        const response = await fetch(`${API_URL}/auth/me`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            // 필요 시 토큰 추가
           },
         });
         if (response.ok) {
           const data = await response.json();
-          setUser(data.user); // 백엔드에서 받은 user 객체 저장
+          setUser(data.user);
         } else {
           setUser(null);
         }
-      } catch (error: any) { // error 타입 명시
+      } catch (error: any) {
         setUser(null);
       }
     };
@@ -58,14 +55,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('카카오 로그인 성공:', token);
       const profile = await getProfile();
 
-      // 백엔드로 kakao_id와 nickname 전송
-      const response = await fetch(`${API_URL}/auth/signup`,{ 
+      const response = await fetch(`${API_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          kakao_id: Number(profile.id), // profile.id는 string이므로 Number로 변환
+          kakao_id: Number(profile.id),
           nickname: profile.nickname,
         }),
       });
@@ -77,9 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       console.log('백엔드 응답:', data);
 
-      setUser(data.user); // 백엔드에서 받은 user 객체로 설정
+      setUser(data.user);
       setError(null);
-    } catch (error: any) { // error 타입 명시
+    } catch (error: any) {
       console.error('카카오 로그인 실패:', error);
       setError(error.message);
       throw error;
@@ -91,14 +87,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await kakaoLogout();
       setUser(null);
       setError(null);
-    } catch (error: any) { // error 타입 명시
+    } catch (error: any) {
       console.error('로그아웃 실패:', error);
       setError(error.message);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, signInWithKakao, signOut, error }}>
+    <AuthContext.Provider value={{ user, setUser, signInWithKakao, signOut, error }}>
       {children}
     </AuthContext.Provider>
   );

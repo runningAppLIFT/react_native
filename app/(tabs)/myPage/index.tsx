@@ -1,17 +1,23 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/hooks/authContext'; // 프로젝트 구조에 맞게 경로 조정
+import { useAuth } from '@/hooks/authContext';
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
 export default function MyPageIndex() {
   const router = useRouter();
-  const { user } = useAuth(); // AuthContext에서 user 가져오기
+  const { user, setUser } = useAuth();
   const translateX = useSharedValue(0);
+  const [nickname, setNickname] = useState(user?.nickname || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const onGestureEvent = ({ nativeEvent }) => {
-    translateX.value = nativeEvent.translationX; // 스와이프 애니메이션
+    translateX.value = nativeEvent.translationX;
   };
 
   const onHandlerStateChange = ({ nativeEvent }) => {
@@ -21,7 +27,7 @@ export default function MyPageIndex() {
       } else if (nativeEvent.translationX < -100) {
         router.push('(tabs)/myPage/right');
       }
-      translateX.value = withTiming(0); // 원래 위치로 복귀
+      translateX.value = withTiming(0);
     }
   };
 
@@ -29,7 +35,6 @@ export default function MyPageIndex() {
     transform: [{ translateX: translateX.value }],
   }));
 
-  // 가입일자 포맷팅 (user.createdAt이 "2025-01-24T00:00:00Z" 같은 형식이라고 가정)
   const joinDate = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('ko-KR', {
         year: 'numeric',
@@ -38,6 +43,45 @@ export default function MyPageIndex() {
       }).replace(/\. /g, '.')
     : '정보 없음';
 
+  const handleSaveNickname = async () => {
+    if (!user) {
+      Alert.alert('오류', '사용자 정보가 없습니다.');
+      return;
+    }
+
+    if (!nickname.trim()) {
+      Alert.alert('오류', '닉네임을 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('닉네임 업데이트 요청:', { userId: user.userId, nickname });
+      const response = await fetch(`${API_URL}/auth/users/${user.userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ nickname }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user || { ...user, nickname }); // 백엔드 응답 사용, 대체로 로컬 업데이트
+        setNickname(data.user?.nickname || nickname);
+        setIsEditing(false);
+        Alert.alert('성공', '닉네임이 변경되었습니다.');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('오류', errorData.message || '닉네임 변경에 실패했습니다.');
+      }
+    } catch (error) {
+      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <PanGestureHandler
       onGestureEvent={onGestureEvent}
@@ -45,23 +89,47 @@ export default function MyPageIndex() {
       activeOffsetX={[-10, 10]}
     >
       <Animated.View style={[styles.container, animatedStyle]}>
-        {/* 상단 타이틀 */}
         <Text style={styles.header}>LIFT</Text>
 
-        {/* 프로필 이미지 (원형 아바타) */}
         <View style={styles.avatarContainer}>
           <View style={styles.avatarPlaceholder} />
         </View>
 
-        {/* 사용자 정보: 닉네임과 가입일자만 표시 */}
-        <Text style={styles.userInfo}>닉네임: {user?.nickname || '정보 없음'}</Text>
-        <Text style={styles.userInfo}>가입일자: {joinDate}</Text>
-
-        {/* 버튼들 */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>정보 수정하기</Text>
+        <View style={styles.nicknameContainer}>
+          <Text style={styles.userInfoLabel}>아이디:</Text>
+          {isEditing ? (
+            <TextInput
+              style={styles.nicknameInput}
+              value={nickname}
+              onChangeText={setNickname}
+              autoFocus
+              editable={!isLoading}
+            />
+          ) : (
+            <Text style={styles.userInfo}>{nickname || '정보 없음'}</Text>
+          )}
+          <TouchableOpacity
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={() => {
+              if (isEditing) {
+                handleSaveNickname();
+              } else {
+                setIsEditing(true);
+              }
+            }}
+            disabled={isLoading}
+          >
+            <Text style={styles.saveButtonText}>{isEditing ? '저장' : '수정'}</Text>
           </TouchableOpacity>
+        </View>
+          
+        <View style={styles.userInfoDateContainer}>
+          <Text style={styles.userInfoDateLabel}>가입일자:</Text>
+          <Text style={styles.userInfoDateText}>{joinDate || '정보 없음'}</Text>
+        </View>
+          
+
+        <View style={styles.buttonContainer}>
           <TouchableOpacity style={[styles.button, { backgroundColor: '#A3BFFA' }]}>
             <Text style={styles.buttonText}>회원 탈퇴하기</Text>
           </TouchableOpacity>
@@ -100,10 +168,60 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     backgroundColor: '#E6EFFF',
   },
+  nicknameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '80%',
+    marginVertical: 5,
+  },
+  userInfoLabel: {
+    fontSize: 16,
+    color: '#333',
+    width: 80, // 레이블의 고정 폭 설정
+  },
   userInfo: {
     fontSize: 16,
     color: '#333',
-    marginVertical: 5,
+    flex: 1,
+  },
+  nicknameInput: {
+    fontSize: 16,
+    color: '#333',
+    borderBottomWidth: 1,
+    borderBottomColor: '#A3BFFA',
+    flex: 1,
+    paddingVertical: 2,
+  },
+  saveButton: {
+    backgroundColor: '#A3BFFA',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#B0C4DE',
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  userInfoDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '80%',
+    marginTop: 5,
+  },
+  userInfoDateLabel: {
+    fontSize: 16,
+    color: '#333',
+    width: 80, // 레이블의 고정 폭 (닉네임과 동일)
+  },
+  userInfoDateText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
   },
   buttonContainer: {
     position: 'absolute',
