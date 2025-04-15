@@ -86,9 +86,6 @@ export default function TabLayout() {
             title: 'Running',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.run" color={color} />,
           }}
-          listeners={{
-            tabPress: () => console.log('Running tab pressed'),
-          }}
         />
         <Tabs.Screen
           name="course"

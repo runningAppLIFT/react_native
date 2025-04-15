@@ -15,7 +15,6 @@ export default function RunningIndex() {
 
   const onGestureEvent = ({ nativeEvent }) => {
     if (nativeEvent.translationX < -150) {
-      console.log('Swipe left detected in index');
       router.push('(tabs)/Running/RunningHistory');
     }
   };
