@@ -8,7 +8,7 @@ const RunningLayout = () => {
         headerShown: false,
         gestureEnabled: true,
         gestureDirection: 'horizontal', // index -> RunningHistory: 오른쪽→왼쪽
-        gestureResponseDistance: 600, // 시뮬레이터용 초고감도
+        gestureResponseDistance: 300, // 시뮬레이터용 초고감도
         cardStyleInterpolator: ({ current, layouts }) => {
           return {
             cardStyle: {
@@ -35,10 +35,10 @@ const RunningLayout = () => {
         options={{
           gestureEnabled: true, // RunningHistory -> index: 왼쪽→오른쪽 (기본 뒤로 가기)
         }}
-        listeners={{
-          transitionStart: () => console.log('Transition started'),
-          transitionEnd: () => console.log('Transition ended'),
-        }}
+        // listeners={{
+        //   transitionStart: () => console.log('Transition started'),
+        //   transitionEnd: () => console.log('Transition ended'),
+        // }}
       />
     </Stack>
   );

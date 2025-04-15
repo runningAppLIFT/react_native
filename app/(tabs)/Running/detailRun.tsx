@@ -1,41 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity } from 'react-native';
 import MapView, { Polyline } from 'react-native-maps';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // 아이콘 패키지 (Ionicons 사용)
+import { Ionicons } from '@expo/vector-icons';
+import { useRunRecorder } from '@/hooks/useRunRecorder'; // 경로 확인 필요
 
 export default function DetailRunScreen() {
-  const { distance, time, pace, path, date } = useLocalSearchParams(); // 전달된 기록 데이터 받기
-  const routePath = JSON.parse(String(path)); // String 값을 배열로 변환
-  const router = useRouter(); // 라우터 객체 생성
+  const {
+    routePath,
+    date,
+    distance,
+    pace,
+    time,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    handleSaveCourse,
+    handleSave,
+  } = useRunRecorder();
 
-  // 제목과 내용을 저장하는 상태 설정
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-
-  // 코스 저장 로직 (이미 존재하는 저장 로직을 호출 가능)
-  const handleSaveCourse = () => {
-    // 여기에 코스를 저장하는 기존 로직 추가
-    Alert.alert('저장 완료', '코스가 내 저장 코스에 추가되었습니다.');
-  };
-
-  // 입력값 저장 로직
-  const handleSave = () => {
-    if (!title.trim() || !description.trim()) {
-      Alert.alert('오류', '제목과 내용을 모두 입력해주세요.');
-      return;
-    }
-
-    // 저장 처리 (혹은 서버로 데이터 전송)
-    Alert.alert('저장 완료', `제목: ${title}\n내용: ${description}`);
-
-    // 저장 후 `tabs/Running` 경로로 이동
-    router.push('/(tabs)/Running');
-  };
+  // 문자열로 안전하게 변환
+  const safeDate = Array.isArray(date) ? date[0] : date || '';
+  const safeDistance = Array.isArray(distance) ? distance[0] : distance || '0';
+  const safePace = Array.isArray(pace) ? pace[0] : pace || '';
+  const safeTime = Array.isArray(time) ? time[0] : time || '';
 
   return (
     <View style={styles.container}>
-      {/* 지도 */}
       <MapView
         style={styles.map}
         initialRegion={{
@@ -48,27 +39,23 @@ export default function DetailRunScreen() {
         <Polyline coordinates={routePath} strokeColor="#FF5E2B" strokeWidth={3} />
       </MapView>
 
-      {/* 코스 저장 버튼 */}
       <TouchableOpacity style={styles.saveCourseButton} onPress={handleSaveCourse}>
         <Ionicons name="bookmark-outline" size={24} color="white" />
       </TouchableOpacity>
 
-      {/* 기록 화면 */}
       <View style={styles.infoContainer}>
-        <Text style={styles.date}>{date}</Text>
+        <Text style={styles.date}>{safeDate}</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>거리</Text>
-          <Text style={styles.infoValue}>
-            {Number(distance).toFixed(2)} km
-          </Text>
+          <Text style={styles.infoValue}>{Number(safeDistance).toFixed(2)} km</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>페이스</Text>
-          <Text style={styles.infoValue}>{pace}</Text>
+          <Text style={styles.infoValue}>{safePace}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>시간</Text>
-          <Text style={styles.infoValue}>{time}</Text>
+          <Text style={styles.infoValue}>{safeTime}</Text>
         </View>
         <TextInput
           style={styles.input}
@@ -83,7 +70,6 @@ export default function DetailRunScreen() {
           value={description}
           onChangeText={setDescription}
         />
-        {/* 확인 버튼 */}
         <TouchableOpacity style={styles.button} onPress={handleSave}>
           <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
