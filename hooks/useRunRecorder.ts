@@ -44,6 +44,13 @@ export const useRunRecorder = () => {
         paceSeconds = 0;
       }
   
+      // pace 포맷팅
+      const formatPace = (seconds: number): string => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+      };
+
       // time 포맷팅
       const formatTime = (time: string): string => {
         const parts = time.split(':');
@@ -59,8 +66,8 @@ export const useRunRecorder = () => {
           return '00:00:00';
         }
       };
-  
-      const formattedTime = formatTime(String(time));
+    const formattedTime = formatTime(String(time));
+    const formattedPace = formatPace(paceSeconds);
   
       const recordData = {
         user_id: Number(user.userId) || 0,
@@ -75,7 +82,7 @@ export const useRunRecorder = () => {
         },
         run_title: title || null,
         run_content: description || null,
-        run_pace: paceSeconds / 60,
+        run_pace: formattedPace,
       };
   
       console.log('백엔드로 전송:', recordData);
