@@ -3,13 +3,15 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/authContext'; // 프로젝트 구조에 맞게 경로 조정
 
 export default function MyPageIndex() {
   const router = useRouter();
+  const { user } = useAuth(); // AuthContext에서 user 가져오기
   const translateX = useSharedValue(0);
 
   const onGestureEvent = ({ nativeEvent }) => {
-    translateX.value = nativeEvent.translationX; // 스와이프 중 애니메이션
+    translateX.value = nativeEvent.translationX; // 스와이프 애니메이션
   };
 
   const onHandlerStateChange = ({ nativeEvent }) => {
@@ -27,6 +29,15 @@ export default function MyPageIndex() {
     transform: [{ translateX: translateX.value }],
   }));
 
+  // 가입일자 포맷팅 (user.createdAt이 "2025-01-24T00:00:00Z" 같은 형식이라고 가정)
+  const joinDate = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).replace(/\. /g, '.')
+    : '정보 없음';
+
   return (
     <PanGestureHandler
       onGestureEvent={onGestureEvent}
@@ -42,12 +53,11 @@ export default function MyPageIndex() {
           <View style={styles.avatarPlaceholder} />
         </View>
 
-        {/* 사용자 정보 */}
-        <Text style={styles.userInfo}>아이디 : 혀니</Text>
-        <Text style={styles.userInfo}>가입일자 : 2025.1.24</Text>
-        <Text style={styles.userInfo}>소개글 : 러닝에 진심인 취준생</Text>
+        {/* 사용자 정보: 닉네임과 가입일자만 표시 */}
+        <Text style={styles.userInfo}>닉네임: {user?.nickname || '정보 없음'}</Text>
+        <Text style={styles.userInfo}>가입일자: {joinDate}</Text>
 
-        {/* 버튼들을 화면 중앙 아래쪽으로 배치 */}
+        {/* 버튼들 */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button}>
             <Text style={styles.buttonText}>정보 수정하기</Text>
@@ -67,7 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
     paddingHorizontal: 20,
-    marginTop: 20, // 상단 마진
+    marginTop: 20,
   },
   header: {
     fontSize: 24,
@@ -81,13 +91,13 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 140, // 컨테이너 넓이
-    height: 140, // 컨테이너 높이
+    width: 140,
+    height: 140,
   },
   avatarPlaceholder: {
     width: 160,
     height: 160,
-    borderRadius: 80, // 크기에 맞춰 원형 유지
+    borderRadius: 80,
     backgroundColor: '#E6EFFF',
   },
   userInfo: {
@@ -95,11 +105,9 @@ const styles = StyleSheet.create({
     color: '#333',
     marginVertical: 5,
   },
-
-  // 버튼 컨테이너 (아래로 이동)
   buttonContainer: {
-    position: 'absolute', // 고정된 위치
-    bottom: 120, // 하단 탭에서 약간 위로 띄움 (필요시 조정)
+    position: 'absolute',
+    bottom: 120,
     width: '100%',
     alignItems: 'center',
   },

@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function MyPageLeft() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>왼쪽 페이지</Text>
+      <Text style={styles.text}>내 코스 관리 페이지</Text>
     </View>
   );
 }

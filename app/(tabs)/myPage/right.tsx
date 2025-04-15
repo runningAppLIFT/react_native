@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function MyPageRight() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>오른쪽 페이지</Text>
+      <Text style={styles.text}>내 작성글 조회 페이지</Text>
     </View>
   );
 }

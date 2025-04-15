@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, Button } from 'react-native';
+import { Platform, Button, Alert } from 'react-native'; // Alert 추가
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuth } from '@/hooks/authContext';
 import { HapticTab } from '@/components/HapticTab';
@@ -27,6 +27,22 @@ export default function TabLayout() {
     } catch (error) {
       console.error('Logout Failed:', error);
     }
+  };
+
+  // myPage 탭 클릭 시 로그인 체크
+  const handleMyPagePress = () => {
+    if (!isLoggedIn) {
+      Alert.alert(
+        '로그인 필요',
+        '마이페이지를 보려면 로그인이 필요합니다.',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '로그인', onPress: () => router.replace('/login') },
+        ]
+      );
+      return false; // 탭 이동 방지
+    }
+    return true; // 탭 이동 허용
   };
 
   return (
@@ -84,6 +100,14 @@ export default function TabLayout() {
           options={{
             title: 'Mypage',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          }}
+          listeners={{
+            tabPress: (e) => {
+              // 로그인 안 되어 있으면 이벤트 취소
+              if (!handleMyPagePress()) {
+                e.preventDefault();
+              }
+            },
           }}
         />
       </Tabs>
