@@ -28,7 +28,7 @@ export const useCourses = (user: { userId: string } | null) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/courses/${user.userId}`, {
+      const response = await fetch(`${API_URL}/courses/saves/${user.userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
