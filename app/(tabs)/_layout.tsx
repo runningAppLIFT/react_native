@@ -49,7 +49,7 @@ export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
-        initialRouteName="index"
+        initialRouteName="Community"
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: true,
@@ -75,6 +75,12 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="index"
+          options={{
+            href: null, 
+          }}
+        />
+        <Tabs.Screen
+          name="Community"
           options={{
             title: 'Community',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="bubble.left.and.bubble.right" color={color} />,

@@ -99,6 +99,14 @@ export default function MapScreen() {
         body: JSON.stringify(payload),
       });
 
+      console.log('=== 저장 요청 정보 ===');
+      console.log('userId:', user.userId);
+      console.log('courseTitle:', courseTitle);
+      console.log('courseDescription:', courseDescription);
+      console.log('points:', points);
+
+
+
       const result = await response.text(); // or response.json() if you expect JSON
 
       if (!response.ok) throw new Error(`(${response.status}) ${result}`);
@@ -195,35 +203,29 @@ export default function MapScreen() {
               setIsEditOptionsVisible(false);
               setPoints([]);
               setActiveFunction(null);
+              handleToggleUserCourses();
             }}
           >
             <Text style={styles.iconText}>🔍</Text>
           </TouchableOpacity>
           {isMoreOptionsVisible && (
             <View style={[styles.horizontalOptions, { top: -20, right: 135 }]}>
-              <TouchableOpacity style={styles.optionButton} onPress={handleToggleUserCourses}>
-                <Text style={styles.optionButtonText}>내 코스</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.optionButton} 
-                onPress={() => region && handleToggleNearbyCourses(region)} // region이 null일 경우 호출 방지
-              >
-                <Text style={styles.optionButtonText}>근처 코스</Text>
-              </TouchableOpacity>
+
+              {/* BottomSheet 모달 컴포넌트 */}
+              <NearbyCoursesBottomSheet
+                  isVisible={true} // 코스 목록 모달의 가시성 상태
+                  courses={courses}  // 코스 목록 데이터
+                  onClose={() => { // 모달 닫기 핸들러
+                    
+                    handleToggleUserCourses();
+                    region && handleToggleNearbyCourses(region);
+                  }}
+                  handleSave={handleSavePoints} // 저장 핸들러
+                />
+
             </View>
           )}
         </View>
-
-        <NearbyCoursesBottomSheet
-          isVisible={isUserCoursesVisible || isNearbyCoursesVisible}
-          courses={isUserCoursesVisible ? courses : []} 
-          onClose={() => {
-            // 코스 목록을 닫을 때 관련 상태들을 초기화하거나 토글하는 로직 추가
-            handleToggleUserCourses();
-            region && handleToggleNearbyCourses(region);
-          }}
-          handleSave={handleSavePoints}
-        />
       </View>
 
       {/* 저장 모달 - 이후 컴포넌트로 수정 */}
@@ -256,8 +258,7 @@ export default function MapScreen() {
             <View style={styles.modalButtonGroup}>
             <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
-                onPress={handleSavePoints}
-              >
+                onPress={handleSavePoints}>
                 <Text style={styles.modalButtonText}>저장</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -292,7 +293,7 @@ export default function MapScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-    
+      
     </View>
   );
 }
