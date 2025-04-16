@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Alert } from 'react-native';
 import MapView, { Polyline } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router'; // Add router import
 import { useRunRecorder } from '@/hooks/useRunRecorder';
 import Constants from 'expo-constants';
 
@@ -11,13 +11,13 @@ const API_URL = Constants.expoConfig?.extra?.apiUrl;
 export default function DetailRunScreen() {
   const { record } = useLocalSearchParams();
   const parsedRecord = record ? JSON.parse(record) : null;
+  console.log('Received parsedRecord:', parsedRecord);
+  console.log('run_course.coordinates:', parsedRecord?.run_course?.coordinates);
   const { routePath, date, distance, pace, time, title, setTitle, description, setDescription, handleSaveCourse, handleSave } = useRunRecorder();
 
-  // 모드 결정: record가 있으면 상세 조회, 없으면 러닝 종료 후
   const isHistoryMode = !!parsedRecord;
-  const [isEditing, setIsEditing] = useState(!isHistoryMode); // 러닝 종료 후는 편집 가능, 상세 조회는 기본적으로 읽기 전용
+  const [isEditing, setIsEditing] = useState(!isHistoryMode);
 
-  // 데이터 소스 설정
   const runData = isHistoryMode
     ? {
         date: parsedRecord.created_at,
@@ -41,7 +41,6 @@ export default function DetailRunScreen() {
         coordinates: routePath || [],
       };
 
-  // 상태 관리
   const [localTitle, setLocalTitle] = useState(runData.title);
   const [localDescription, setLocalDescription] = useState(runData.description);
 
@@ -52,7 +51,6 @@ export default function DetailRunScreen() {
     }
   }, [localTitle, localDescription, isHistoryMode, setTitle, setDescription]);
 
-  // 데이터 포맷팅 함수
   const formatRunTime = (runTime) => {
     if (isHistoryMode) {
       const { hours = 0, minutes = 0, seconds = 0 } = runTime || {};
@@ -84,7 +82,6 @@ export default function DetailRunScreen() {
     return dateStr;
   };
 
-  // 지도 초기 영역 설정
   const initialRegion = runData.coordinates.length > 0
     ? {
         latitude: runData.coordinates[0].latitude,
@@ -99,7 +96,6 @@ export default function DetailRunScreen() {
         longitudeDelta: 0.01,
       };
 
-  // 저장 핸들러
   const handleSaveAction = async () => {
     if (isHistoryMode) {
       if (isEditing) {
@@ -120,14 +116,14 @@ export default function DetailRunScreen() {
           Alert.alert('오류', '기록을 업데이트하지 못했습니다.');
         }
       } else {
-        setIsEditing(true); // 편집 모드로 전환
+        // Navigate back to RunningHistory when confirming without editing
+        router.replace('/(tabs)/Running/RunningHistory');
       }
     } else {
-      handleSave(); // 러닝 종료 후 저장
+      handleSave();
     }
   };
 
-  // 경로 저장 (러닝 종료 후에만 사용)
   const handleSaveCourseAction = () => {
     if (!isHistoryMode) {
       handleSaveCourse();
@@ -178,7 +174,7 @@ export default function DetailRunScreen() {
           editable={isEditing}
         />
         <TouchableOpacity style={styles.button} onPress={handleSaveAction}>
-          <Text style={styles.buttonText}>{isHistoryMode && !isEditing ? '편집' : '확인'}</Text>
+          <Text style={styles.buttonText}>{isHistoryMode && !isEditing ? '확인' : '확인'}</Text>
         </TouchableOpacity>
       </View>
     </View>

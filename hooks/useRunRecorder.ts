@@ -15,10 +15,21 @@ export const useRunRecorder = () => {
 
   // 경로 파싱
   let routePath: { longitude: number; latitude: number }[] = [];
-  try {
-    routePath = JSON.parse(String(path)) || [];
-  } catch (error) {
-    console.error('경로 파싱 실패:', error);
+  if (typeof path === 'string' && path.trim() !== '' && path !== 'undefined') {
+    try {
+      routePath = JSON.parse(path) || [];
+      if (!Array.isArray(routePath) || !routePath.every(coord => 
+        Array.isArray(coord) && coord.length === 2 && !isNaN(coord[0]) && !isNaN(coord[1])
+      )) {
+        console.warn('Invalid routePath format:', routePath);
+        routePath = [];
+      }
+    } catch (error) {
+      console.error('경로 파싱 실패:', error, 'Input:', path);
+      routePath = [];
+    }
+  } else {
+    console.log('path is undefined or invalid, setting routePath to empty array');
     routePath = [];
   }
 
@@ -33,7 +44,7 @@ export const useRunRecorder = () => {
       Alert.alert('오류', '로그인이 필요합니다.');
       return;
     }
-  
+
     const distanceNum = Number(distance);
     try {
       let paceSeconds: number;
@@ -43,7 +54,7 @@ export const useRunRecorder = () => {
       } catch {
         paceSeconds = 0;
       }
-  
+
       // pace 포맷팅
       const formatPace = (seconds: number): string => {
         const minutes = Math.floor(seconds / 60);
@@ -66,9 +77,10 @@ export const useRunRecorder = () => {
           return '00:00:00';
         }
       };
-    const formattedTime = formatTime(String(time));
-    const formattedPace = formatPace(paceSeconds);
-  
+
+      const formattedTime = formatTime(String(time));
+      const formattedPace = formatPace(paceSeconds);
+
       const recordData = {
         user_id: Number(user.userId) || 0,
         run_time: formattedTime,
@@ -84,9 +96,9 @@ export const useRunRecorder = () => {
         run_content: description || null,
         run_pace: formattedPace,
       };
-  
+
       console.log('백엔드로 전송:', recordData);
-  
+
       const response = await fetch(`${API_URL}/runs`, {
         method: 'POST',
         headers: {
@@ -94,7 +106,7 @@ export const useRunRecorder = () => {
         },
         body: JSON.stringify(recordData),
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage =
@@ -105,7 +117,7 @@ export const useRunRecorder = () => {
           Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage
         );
       }
-  
+
       const result = await response.json();
       Alert.alert('저장 완료', `기록이 저장되었습니다. (ID: ${result.recordId})`);
       router.push('/(tabs)/Running');
