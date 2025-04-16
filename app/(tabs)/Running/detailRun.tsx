@@ -11,6 +11,8 @@ const API_URL = Constants.expoConfig?.extra?.apiUrl;
 export default function DetailRunScreen() {
   const { record } = useLocalSearchParams();
   const parsedRecord = record ? JSON.parse(record) : null;
+  console.log('Received parsedRecord:', parsedRecord);
+  console.log('run_course.coordinates:', parsedRecord?.run_course?.coordinates);
   const { routePath, date, distance, pace, time, title, setTitle, description, setDescription, handleSaveCourse, handleSave } = useRunRecorder();
 
   // 모드 결정: record가 있으면 상세 조회, 없으면 러닝 종료 후
