@@ -82,7 +82,7 @@ export const useCourses = (user: { userId: string } | null) => {
   
     try {
       const response = await fetch(
-        `${API_URL}/courses/nearby?latitude=${latitude}&longitude=${longitude}&radius=1`,
+        `${API_URL}/courses/nearby?latitude=${latitude}&longitude=${longitude}&radius=100`,
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
   

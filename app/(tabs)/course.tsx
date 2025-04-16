@@ -99,14 +99,6 @@ export default function MapScreen() {
         body: JSON.stringify(payload),
       });
 
-      console.log('=== 저장 요청 정보 ===');
-      console.log('userId:', user.userId);
-      console.log('courseTitle:', courseTitle);
-      console.log('courseDescription:', courseDescription);
-      console.log('points:', points);
-
-
-
       const result = await response.text(); // or response.json() if you expect JSON
 
       if (!response.ok) throw new Error(`(${response.status}) ${result}`);
@@ -198,13 +190,7 @@ export default function MapScreen() {
         <View style={styles.buttonGroup}>
           <TouchableOpacity
             style={[styles.circleButton, styles.searchButton]}
-            onPress={() => {
-              setIsMoreOptionsVisible((prev) => !prev);
-              setIsEditOptionsVisible(false);
-              setPoints([]);
-              setActiveFunction(null);
-              handleToggleUserCourses();
-            }}
+            onPress={() => region && handleToggleNearbyCourses(region)}
           >
             <Text style={styles.iconText}>🔍</Text>
           </TouchableOpacity>
@@ -213,10 +199,9 @@ export default function MapScreen() {
 
               {/* BottomSheet 모달 컴포넌트 */}
               <NearbyCoursesBottomSheet
-                  isVisible={true} // 코스 목록 모달의 가시성 상태
+                  isVisible={isUserCoursesVisible} // 코스 목록 모달의 가시성 상태
                   courses={courses}  // 코스 목록 데이터
                   onClose={() => { // 모달 닫기 핸들러
-                    
                     handleToggleUserCourses();
                     region && handleToggleNearbyCourses(region);
                   }}
@@ -259,7 +244,7 @@ export default function MapScreen() {
             <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
                 onPress={handleSavePoints}>
-                <Text style={styles.modalButtonText}>저장</Text>
+                <Text style={styles.modalButtonText}>저장</Text>A
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
@@ -293,7 +278,8 @@ export default function MapScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-      
+    
+
     </View>
   );
 }

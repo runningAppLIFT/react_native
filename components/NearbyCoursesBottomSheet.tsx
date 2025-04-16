@@ -4,8 +4,8 @@ import BottomSheet from '@gorhom/bottom-sheet';
 import HorizontalPagination from './HorizontalPagination';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-interface Course {
-  course_id : number;
+export interface Course {
+  course_id: number;
   title: string;
   distance: string;
   description?: string;
@@ -18,12 +18,6 @@ interface NearbyCoursesBottomSheetProps {
   onClose: () => void;
   handleSave: (course: Course) => void;
 }
-// 더미 코스 데이터
-const mockCourses: Course[] = Array.from({ length: 12 }, (_, i) => ({
-  course_id: i + 1,
-  title: `코스 ${i + 1}`,
-  distance: `${(Math.random() * 2 + 1).toFixed(2)} km`,
-}));
 
 export default function NearbyCoursesBottomSheet({
   isVisible,
@@ -33,7 +27,6 @@ export default function NearbyCoursesBottomSheet({
 }: NearbyCoursesBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  // 컴포넌트 표시 여부를 isVisible로 제어 (필요시)
   if (!isVisible) {
     return null;
   }
@@ -62,10 +55,6 @@ export default function NearbyCoursesBottomSheet({
               </View>
             )}
           />
-          {/* 닫기 버튼 등의 추가 UI를 원한다면 여기에 작성 */}
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeText}>닫기</Text>
-          </TouchableOpacity>
         </View>
       </BottomSheet>
     </GestureHandlerRootView>
@@ -82,12 +71,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#f7f7f7',
     borderRadius: 10,
     padding: 15,
     alignItems: 'center',
+    marginBottom: 10,
   },
   courseTitle: {
     fontSize: 16,
