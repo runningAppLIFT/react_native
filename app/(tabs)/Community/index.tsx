@@ -37,7 +37,7 @@ export default function CommunityIndex() {
 
    const onGestureEvent = ({ nativeEvent }: { nativeEvent: { translationX: number } }) => {
     if (nativeEvent.translationX < -150) {
-      router.push('/(tabs)/Community/crew');
+      router.push('/(tabs)/Community/Crew');
     }
   };
 
