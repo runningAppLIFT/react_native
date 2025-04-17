@@ -26,7 +26,7 @@ export default function Crew() {
 
   const onGestureEvent = ({ nativeEvent }: { nativeEvent: { translationX: number } }) => {
     if (nativeEvent.translationX < 150) {
-      // router.push('/(tabs)/Community');
+      router.push('/(tabs)/Community');
     }
   };
 
@@ -51,7 +51,7 @@ export default function Crew() {
       <Animated.View style={{ flex: 1 }}>
         <ThemedView style={styles.container}>
           {/* 상단 헤더 */}
-          <View style={styles.header}>
+          <View style={styles.headerImageContainer}>
             <ThemedText type="title" style={styles.headerTitle}>
               크루
             </ThemedText>
@@ -83,15 +83,6 @@ export default function Crew() {
               {filteredCrews.map(renderCrewItem)}
             </View>
           </ScrollView>
-
-          <TouchableOpacity
-            style={styles.circleButton}
-            onPress={() => {
-              /* 크루 생성 네비게이션 */
-            }}
-          >
-            <Text style={styles.circleButtonText}>+</Text>
-          </TouchableOpacity>
         </ThemedView>
       </Animated.View>
     </PanGestureHandler>
@@ -101,28 +92,38 @@ export default function Crew() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F8FC',
   },
-  header: {
-    height: 100,
-    backgroundColor: '#A1CEDC',
-    flexDirection: 'row',
+  headerImageContainer: {
+    height: 80,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
+    backgroundColor: '#0066FF', // 모던한 파란색
+    marginBottom: 20,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    position: 'relative',
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   btnPlus: {
-    padding: 4,
+    position: 'absolute', // 절대 위치 설정
+    right: 16, // 오른쪽 여백
+    top: 8, // 위쪽 여백
   },
   btnPlusText: {
-    fontSize: 54,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   scrollViewContent: {
     paddingHorizontal: 16,
@@ -131,12 +132,15 @@ const styles = StyleSheet.create({
   crewListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#ececec',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   imageContainer: {
     width: 50,

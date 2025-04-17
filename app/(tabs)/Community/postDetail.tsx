@@ -51,9 +51,6 @@ export default function PostDetail() {
     return (
       <View style={styles.container}>
         <Text>게시글 데이터를 불러올 수 없습니다.</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ color: '#007AFF', marginTop: 10 }}>뒤로 가기</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -63,11 +60,11 @@ export default function PostDetail() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerText}>자유게시판</Text>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+          <Ionicons name="ellipsis-vertical" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -148,12 +145,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#A1CEDC',
+    backgroundColor: '#0066FF',
   },
   headerText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#FFFFFF',
   },
   content: {
     padding: 16,
