@@ -9,7 +9,7 @@ export const useCourses = (user: { userId: string } | null) => {
   const [isNearbyCoursesVisible, setIsNearbyCoursesVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleToggleUserCourses = async () => {
+  const handleToggleUserCourses = async (region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; } | null) => {
     if (isUserCoursesVisible) {
       setIsUserCoursesVisible(false);
       setCourses([]);
@@ -43,6 +43,8 @@ export const useCourses = (user: { userId: string } | null) => {
         setCourses(
           result.courses.map((course: any) => ({
             course_id: course.course_id,
+            course_title: course.course_title,
+            course_content: course.course_content,
             points: course.course_line.coordinates.map(([longitude, latitude]: [number, number]) => ({
               latitude,
               longitude,
@@ -90,22 +92,18 @@ export const useCourses = (user: { userId: string } | null) => {
         const errorText = await response.text();
         throw new Error(`Failed to load nearby courses: ${response.status} - ${errorText}`);
       }
-  
+
       const result = await response.json();
       if (result.courses?.length > 0) {
         setCourses(
           result.courses.map((course: any) => ({
             course_id: course.course_id,
-            title: course.title,
-            distance: course.distance,
-            description: course.description,
-            points: Array.isArray(course.course_line?.coordinates)
-              ? course.course_line.coordinates.map(([longitude, latitude]: [number, number]) => ({
-                  latitude,
-                  longitude,
-                }))
-              : [],
+            points: course.course_line.coordinates.map(([longitude, latitude]: [number, number]) => ({
+              latitude,
+              longitude,
+            })),
           }))
+          
         );
         
         setIsNearbyCoursesVisible(true);
@@ -133,9 +131,8 @@ export const useCourses = (user: { userId: string } | null) => {
 
 export interface Course {
   course_id: number;
-  title: string;
-  distance: string;
-  description?: string;
+  course_title: string;
+  course_content: string;
   points: Coordinate[];
 }
 

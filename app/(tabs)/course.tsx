@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
 import { useAuth } from '@/hooks/authContext';
 import { useLocation } from '../../hooks/useLocation';
 import { usePoints } from '../../hooks/useMapPoints';
-import { useCourses } from '../../hooks/useCourses';
-import NearbyCoursesBottomSheet from '@/components/NearbyCoursesBottomSheet';
+import { Course, useCourses } from '../../hooks/useCourses';
 import { getDistance } from 'geolib'; 
 
 import Constants from 'expo-constants';
+import { NearbyBottomSheet } from '@/components/NearbyBottomSheet';
+
+
+
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl;
-
-
 
 // 타입 정의
 interface Coordinate {
@@ -40,8 +41,10 @@ const getTotalDistance = (points: Coordinate[]): number => {
   return distance;
 };
 
-
-
+const dummyCourses: Course[] = [
+  { course_id: 1, course_title: '한강 코스', course_content: '뚝섬 ~ 잠실', points: [] },
+  { course_id: 2, course_title: '서울숲 코스', course_content: '서울숲 ~ 성수', points: [] },
+];
 
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
@@ -62,6 +65,9 @@ export default function MapScreen() {
   const { points, setPoints, isAddingPoints, handleAddPointsToggle, handleRemoveLastPoint, handleMapPress } = usePoints();
   const { courses, setCourses, isUserCoursesVisible, isNearbyCoursesVisible, isLoading, handleToggleUserCourses, handleToggleNearbyCourses } = useCourses(user);
 
+  // BottomSheet 관련 상태
+  const [isVisible, setIsVisible] = useState(false);
+
   useLocation(setRegion);
 
   const openSaveModal = () => {
@@ -76,8 +82,6 @@ export default function MapScreen() {
     }
     setIsSaveModalVisible(true);
   };
-
-
   const handleSavePoints = async () => {
     if (points.length === 0 || !user?.userId) {
       alert(!user?.userId ? '로그인이 필요합니다.' : '저장할 포인트가 없습니다.');
@@ -103,7 +107,6 @@ export default function MapScreen() {
 
       if (!response.ok) throw new Error(`(${response.status}) ${result}`);
 
-      console.log('서버 응답:', result);
       setIsCompletedModalVisible(true);
 
       setPoints([]);
@@ -119,9 +122,6 @@ export default function MapScreen() {
     // 총 거리 (미터 단위)를 계산하고 km 단위로 표시
     const totalDistance = points.length > 1 ? getTotalDistance(points) : 0;
     const distanceInKm = (totalDistance / 1000).toFixed(2); // km 단위, 소수점 2자리
-
-   
-    
 
   return (
     <View style={styles.container}>
@@ -190,36 +190,26 @@ export default function MapScreen() {
         <View style={styles.buttonGroup}>
           <TouchableOpacity
             style={[styles.circleButton, styles.searchButton]}
-            onPress={() => region && handleToggleNearbyCourses(region)}
+            onPress={() => {
+              if (region) {
+                handleToggleNearbyCourses(region);
+                handleToggleUserCourses(region);
+              setIsVisible(true)
+              }
+            }} // 근처 코스 불러오기 및 BottomSheet 열기
           >
             <Text style={styles.iconText}>🔍</Text>
           </TouchableOpacity>
-          {isMoreOptionsVisible && (
-            <View style={[styles.horizontalOptions, { top: -20, right: 135 }]}>
-
-              {/* BottomSheet 모달 컴포넌트 */}
-              <NearbyCoursesBottomSheet
-                  isVisible={isUserCoursesVisible} // 코스 목록 모달의 가시성 상태
-                  courses={courses}  // 코스 목록 데이터
-                  onClose={() => { // 모달 닫기 핸들러
-                    handleToggleUserCourses();
-                    region && handleToggleNearbyCourses(region);
-                  }}
-                  handleSave={handleSavePoints} // 저장 핸들러
-                />
-
-            </View>
-          )}
         </View>
       </View>
 
-      {/* 저장 모달 - 이후 컴포넌트로 수정 */}
+      {/* 저장 모달 */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={isSaveModalVisible}
-        onRequestClose={() => setIsSaveModalVisible(false)}
-      >
+        onRequestClose={() => setIsSaveModalVisible(false)}>
+
         <View style={styles.modalBackground}>
           <View style={styles.saveModalView}>
             <Text style={styles.modalTitle}>코스 등록</Text>
@@ -227,24 +217,22 @@ export default function MapScreen() {
               style={styles.modalInput}
               placeholder="코스 제목을 입력하세요"
               value={courseTitle}
-              onChangeText={setCourseTitle}
-            />
-             <Text style={styles.distanceText}>
-              총 거리: {distanceInKm} km
-            </Text>
+              onChangeText={setCourseTitle}/>
+
+             <Text style={styles.distanceText}> 총 거리: {distanceInKm} km</Text>
 
             <TextInput
               style={[styles.modalInput, { height: 80 }]}
               placeholder="코스 설명을 입력하세요"
               multiline
               value={courseDescription}
-              onChangeText={setCourseDescription}
-            />
+              onChangeText={setCourseDescription}/>
+
             <View style={styles.modalButtonGroup}>
             <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
                 onPress={handleSavePoints}>
-                <Text style={styles.modalButtonText}>저장</Text>A
+                <Text style={styles.modalButtonText}>저장</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
@@ -252,33 +240,45 @@ export default function MapScreen() {
               >
                 <Text style={styles.modalButtonText}>취소</Text>
               </TouchableOpacity>
-           
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* 완료 모달 - 이후 컴포넌트로 수정 */}
+      {/* 완료 모달 */}
       <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isCompletedModalVisible}
-        onRequestClose={() => setIsCompletedModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.completeModalView}>
-            <Text style={styles.completeText}>저장 완료</Text>
-            <Text style={styles.completeText}>코스가 저장되었습니다!</Text>
-          </View>
+      animationType="fade"
+      transparent={true}
+      visible={isCompletedModalVisible}
+      onRequestClose={() => setIsCompletedModalVisible(false)}
+    >
+      <View style={styles.modalBackground}>
+        <View style={styles.completeModalView}>
+          <Text style={styles.modalTitle}>저장완료</Text>
+          <Text style={styles.modalMessage}>코스가 저장되었습니다!</Text>
+
           <TouchableOpacity
-            style={[styles.modalButton, styles.modalSaveButton]}
             onPress={() => setIsCompletedModalVisible(false)}
           >
             <Text style={styles.modalButtonText}>확인</Text>
           </TouchableOpacity>
         </View>
+      </View>
       </Modal>
-    
+
+
+      {/* BottomSheet 컴포넌트 */}
+      {isVisible && (
+        <NearbyBottomSheet isVisible={isVisible} onClose={() => {
+          if (region!) { 
+            handleToggleNearbyCourses(region); // 근처 코스 
+            handleToggleUserCourses(region); // 코스 정보 
+            setIsVisible(false) // BottomSheet 닫기
+          }}} 
+          courses={courses} // 코스데이터 전달 
+          />
+      )}
+      {/*  BottomSheet 컴포넌트 끝 */}
 
     </View>
   );
@@ -404,7 +404,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2196F3',
   },
   modalButtonText: {
-    color: 'white',
+    color: 'black',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   distanceText: {
@@ -425,5 +426,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2196F3',
   },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 15,
+    color: '#333',
+  },
+
 
 });
