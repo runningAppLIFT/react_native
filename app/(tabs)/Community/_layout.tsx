@@ -26,8 +26,9 @@ const CommunityLayout = () => {
                },
              }}
            >
-       <Stack.Screen name="index" options={{ title: 'Open Board'}} />
-       <Stack.Screen name="Crew" options={{ title: 'Crew' }} />
+      <Stack.Screen name="index" options={{ title: 'Open Board'}} />
+      <Stack.Screen name="Crew" options={{ title: 'Crew' }} />
+      <Stack.Screen name="addPost" options={{ title: 'Add Post' }} />
     </Stack>
   );
 };

@@ -88,13 +88,12 @@ export default function PostDetail() {
           <View style={styles.commentsHeader}>
             <Text style={styles.commentsTitle}>댓글</Text>
             <Text style={styles.likes}>
-                ❤️{parsedPost.like} | 💬{parsedPost.comments?.length || 0}
+              💬{parsedPost.comments?.length || 0}
             </Text>
           </View>
           {/* <View style={styles.commentsHeader}>
               <Text style={styles.commentsTitle}>댓글</Text>
               <Text style={styles.likes}>
-                <Ionicons name="thumbs-up-outline" size={16} color="#000" /> {parsedPost.like} |{' '}
                 <Ionicons name="chatbubble-outline" size={16} color="#000" /> {parsedPost.comments?.length || 0}
               </Text>
             </View> */}
