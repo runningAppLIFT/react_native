@@ -13,7 +13,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, place
       <IconSymbol name="a.magnify" color="#000" style={styles.icon} />
       <TextInput
         style={styles.input}
-        placeholder={placeholder || '게시판 제목 검색'}
+        placeholder={placeholder || '크루 검색'}
         value={value}
         onChangeText={onChangeText}
       />

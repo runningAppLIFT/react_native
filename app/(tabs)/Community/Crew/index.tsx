@@ -34,8 +34,19 @@ export default function Crew() {
     crew.name.toLowerCase().includes(text.toLowerCase())
   );
 
-  const renderCrewItem = (item: Crew) => (
-    <TouchableOpacity style={styles.crewListItem} key={item.id}>
+  const renderCrewItem = (item: Crew, isCrewList: boolean = false) => (
+    <TouchableOpacity
+      style={styles.crewListItem}
+      key={item.id}
+      onPress={() => {
+        if (isCrewList) {
+          router.push({
+            pathname: '/(tabs)/Community/Crew/crewIntro',
+            params: { id: item.id, name: item.name, members: item.members },
+          });
+        }
+      }}
+    >
       <View style={styles.imageContainer}>
         <Text style={styles.imagePlaceholder}>image</Text>
       </View>
@@ -74,13 +85,13 @@ export default function Crew() {
               {initialCrews.length === 0 ? (
                 <Text style={styles.emptyText}>가입한 크루가 없습니다.</Text>
               ) : (
-                filteredCrews.map(renderCrewItem)
+                filteredCrews.map((item) => renderCrewItem(item, true))
               )}
             </View>
 
             <View>
               <Text style={styles.sectionHeader}>크루 목록</Text>
-              {filteredCrews.map(renderCrewItem)}
+              {filteredCrews.map((item) => renderCrewItem(item, true))}
             </View>
           </ScrollView>
         </ThemedView>
