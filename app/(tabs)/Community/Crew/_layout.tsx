@@ -8,7 +8,8 @@ const CommunityLayout = () => {
            headerShown: false, // 헤더를 숨깁니다.
          }}
        >
-       <Stack.Screen name="index" options={{ title: 'addcrew' }} />
+       <Stack.Screen name="index" />
+       <Stack.Screen name="createCrew" options={{ title: 'addcrew' }} />
     </Stack>
   );
 };
