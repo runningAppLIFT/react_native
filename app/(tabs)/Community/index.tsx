@@ -46,19 +46,22 @@ export default function CommunityIndex() {
   );
 
   const renderItem = ({ item }: { item: Post }) => (
-    <TouchableOpacity style={styles.postContainer}> 
-        <ThemedText type="subtitle">{item.title}</ThemedText>
-        <ThemedText >{item.content}</ThemedText>
-        <View style={styles.contentinner}>
-        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-          <Text style={{marginRight: 10}}>{item.name}</Text>
+    <TouchableOpacity
+      style={styles.postContainer}
+      onPress={() => router.push({ pathname: '/(tabs)/Community/postDetail', params: { post: JSON.stringify(item) } })}
+    >
+      <ThemedText type="subtitle">{item.title}</ThemedText>
+      <ThemedText>{item.content}</ThemedText>
+      <View style={styles.contentinner}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ marginRight: 10 }}>{item.name}</Text>
           <Text>{`${item.time}시간 전`}</Text>
         </View>
         <View style={styles.likeContainer}>
-        <IconSymbol name="thumb-up-off-alt"  color="#000" />
-        <Text style={{marginRight: 10}}>{`${item.like}`}</Text> 
-        <IconSymbol name="chat-bubble-outline"  color="#000"/>
-        <Text>{`${item.comment}`}</Text>  
+          <IconSymbol name="hand.thumbsup" color="#000" />
+          <Text style={{ marginRight: 10 }}>{`${item.like}`}</Text>
+          <IconSymbol name="message" color="#000" />
+          <Text>{`${item.comment}`}</Text>
         </View>
       </View>
     </TouchableOpacity>
