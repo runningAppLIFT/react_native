@@ -24,7 +24,7 @@ const dummyCrews = [
   },
   {
     id: '3',
-    name: '홍대 보드게임 크루',
+    name: '홍대 보드게임 모임',
     members: 12,
     description: '보드게임 카페에서 정기적으로 모이는 모임입니다.',
     isMyCrew: false,
@@ -83,9 +83,25 @@ export default function CrewIntro() {
             </Text>
             {activeTab === '모임' && <View style={styles.underline} />}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tabButton}>
-            <Text style={styles.tabText}>게시판</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+              style={[styles.tabButton, activeTab === '게시판' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('게시판');
+                router.push({
+                  pathname: '/(tabs)/Community/Crew/crewBoard',
+                  params: {
+                    id: id || dummyCrews[0].id,
+                    name: name || dummyCrews[0].name,
+                    members: members || dummyCrews[0].members.toString(),
+                  },
+                });
+              }}
+            >
+              <Text style={[styles.tabText, activeTab === '게시판' && styles.activeTabText]}>
+                게시판
+              </Text>
+              {activeTab === '게시판' && <View style={styles.underline} />}
+            </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton}>
             <Text style={styles.tabText}>채팅</Text>
           </TouchableOpacity>

@@ -14,6 +14,8 @@ const CommunityLayout = () => {
       <Stack.Screen name="crewIntro" options={{ title: 'crewIntro' }} />
       <Stack.Screen name="gathering" options={{ title: 'gathering' }} />
       <Stack.Screen name="crewChat" options={{ title: 'crewChat' }} />
+      <Stack.Screen name="crewBoard" options={{ title: 'crewBoard' }} />
+      <Stack.Screen name="crewBoardDetail" options={{ title: 'crewBoardDetail' }} />
     </Stack>
   );
 };
