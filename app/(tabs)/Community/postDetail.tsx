@@ -11,23 +11,26 @@ import {
   Platform,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { usePostDetail } from '@/hooks/community/usePostDetail';
-import { usePostComments } from '@/hooks/community/usePostComments';
+import { usePostComments, Comment } from '@/hooks/community/useComments';
+import { useAuth } from '@/hooks/authContext'; // Import useAuth
 
 export default function PostDetail() {
   const router = useRouter();
   const { post } = useLocalSearchParams();
   const postId = typeof post === 'string' ? Number(JSON.parse(post).comm_number) : null;
 
+  const { user } = useAuth(); // Get user from AuthContext
   const { post: postData, isLoading: isPostLoading, error: postError } = usePostDetail(postId);
-  const { comments, isLoading: isCommentsLoading, error: commentsError, refetch } = usePostComments(postId);
+  const { comments, setComments, isLoading: isCommentsLoading, error: commentsError, refetch, createComment } = usePostComments(postId);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
 
   const handleEdit = () => {
     console.log('Editing post:', postData);
@@ -39,35 +42,36 @@ export default function PostDetail() {
     setModalVisible(false);
   };
 
-  const handleCommentSubmit = () => {
+  const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
-
-    const newComment = {
-      comment_id: Date.now().toString(),
-      author: '현재 사용자', // 실제 앱에서는 로그인한 사용자 정보 사용
-      content: commentText,
-      created_at: new Date().toISOString(),
-      replies: [],
-    };
-
-    if (replyingTo) {
-      // Update the replies array for the specific comment
-      setComments((prevComments) =>
-        prevComments.map((comment) =>
-          comment.comment_id === replyingTo.comment_id
-            ? { ...comment, replies: [...comment.replies, newComment] }
-            : comment
-        )
-      );
-      setReplyingTo(null);
-    } else {
-      // Add new comment to the comments array
-      setComments((prevComments) => [...prevComments, newComment]);
+  
+    if (!user) {
+      Alert.alert('로그인 필요', '댓글을 작성하려면 로그인이 필요합니다.', [
+        { text: '취소', style: 'cancel' },
+        { text: '로그인', onPress: () => router.push('/(tabs)/login') },
+      ]);
+      return;
     }
+  
+    try {
+      const commentData = {
+        user_id: user.userId,
+        content: commentText,
+        parent_comment_id: replyingTo?.coment_id || null, // 대댓글인 경우 부모 댓글 ID 설정
+      };
+      console.log('댓글 전송 데이터:', commentData);
+  
+      await createComment(commentData);
+  
+      setCommentText('');
+      setReplyingTo(null);
 
-    setCommentText('');
-    // TODO: POST request to submit comment to API and refetch comments
-    // refetch();
+      refetch(); 
+      Alert.alert('성공', '댓글이 작성되었습니다.');
+      
+    } catch (err) {
+      Alert.alert('오류', commentsError || '댓글 작성에 실패했습니다.');
+    }
   };
 
   if (isPostLoading || isCommentsLoading) {
@@ -138,43 +142,48 @@ export default function PostDetail() {
               <Text style={styles.commentsTitle}>댓글</Text>
               <Text style={styles.likes}>💬 {comments.length}</Text>
             </View>
-            {comments.map((comment) => (
-              <View key={comment.comment_id} style={styles.commentBox}>
+            {/* 댓글 렌더링 */}
+            {(comments || []).map((comment) => (
+              <View key={comment.coment_id} style={styles.commentBox}>
                 <Text style={styles.commentAuthor}>{comment.author}</Text>
                 <Text style={styles.commentDate}>
-                  {new Date(comment.created_at).toLocaleString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })}
-                </Text>
-                <Text style={styles.commentContent}>{comment.content}</Text>
-                <TouchableOpacity
-                  style={styles.replyButton}
-                  onPress={() => setReplyingTo(comment)}
-                >
-                  <Text style={styles.replyButtonText}>답글</Text>
-                </TouchableOpacity>
-                {/* 대댓글 렌더링 */}
-                {comment.replies.map((reply) => (
-                  <View key={reply.comment_id} style={styles.replyBox}>
-                    <Text style={styles.commentAuthor}>{reply.author}</Text>
-                    <Text style={styles.commentDate}>
-                      {new Date(reply.created_at).toLocaleString('ko-KR', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}
-                    </Text>
-                    <Text style={styles.commentContent}>{reply.content}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
+                {new Date(comment.created_at).toLocaleString('ko-KR', {
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })}
+              </Text>
+              <Text style={styles.commentContent}>{comment.content}</Text>
+              <TouchableOpacity
+                style={styles.replyButton}
+                onPress={() => {
+                  console.log('답글 대상 댓글:', comment);
+                  setReplyingTo(comment);
+                }}
+              >
+                <Text style={styles.replyButtonText}>답글</Text>
+              </TouchableOpacity>
+        
+                  {/* 대댓글 렌더링 - 안전하게 처리 */}
+              {comment.replies && comment.replies.map((reply) => (
+                <View key={reply.coment_id} style={styles.replyBox}>
+                  <Text style={styles.commentAuthor}>{reply.author}</Text>
+                  <Text style={styles.commentDate}>
+                    {new Date(reply.created_at).toLocaleString('ko-KR', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                  <Text style={styles.commentContent}>{reply.content}</Text>
+                </View>
+              ))}
+            </View>
+    ))      }
             {!comments.length && (
               <Text style={{ color: '#777', marginTop: 8 }}>
                 댓글이 없습니다.
@@ -208,12 +217,16 @@ export default function PostDetail() {
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                !commentText.trim() && styles.disabledButton,
+                (!commentText.trim() || isCommentsLoading) && styles.disabledButton,
               ]}
               onPress={handleCommentSubmit}
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || isCommentsLoading}
             >
-              <Text style={styles.submitButtonText}>등록</Text>
+              {isCommentsLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>등록</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
