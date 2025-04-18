@@ -103,7 +103,6 @@ export const useCourses = (user: { userId: string } | null) => {
               longitude,
             })),
           }))
-          
         );
         
         setIsNearbyCoursesVisible(true);
@@ -116,6 +115,70 @@ export const useCourses = (user: { userId: string } | null) => {
       setIsLoading(false);
     }
   };
+
+  const courseContent = async (course_id: number) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/courses/${course_id}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+      );
+   }catch (error: any) {
+      alert(`코스 불러오기에 실패했습니다: ${error.message}`);
+    }
+    finally {
+      setIsLoading(false);
+    }
+
+  }
+
+  const coursesSave = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/courses/saves`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+      );
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to load nearby courses: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+    } catch (error: any) {
+      
+      alert(`코스 저장에 실패했습니다: ${error.message}`);
+
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const coursesDelete = async (course_id: number) => {
+    if (!user?.userId) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/courses/saves/${user.userId}`,
+        { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
+      );
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to load nearby courses: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+    } catch (error: any) {
+      
+      alert(`코스 저장에 실패했습니다: ${error.message}`);
+
+    } finally {
+      setIsLoading(false);
+    }
+  }
   
 
   return {
@@ -126,6 +189,9 @@ export const useCourses = (user: { userId: string } | null) => {
     isLoading,
     handleToggleUserCourses,
     handleToggleNearbyCourses,
+    coursesSave,
+    coursesDelete,
+    courseContent,
   };
 };
 

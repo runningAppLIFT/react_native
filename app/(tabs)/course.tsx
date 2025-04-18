@@ -10,9 +10,7 @@ import { getDistance } from 'geolib';
 
 import Constants from 'expo-constants';
 import { NearbyBottomSheet } from '@/components/NearbyBottomSheet';
-
-
-
+import { MaterialIcons } from '@expo/vector-icons';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
@@ -32,6 +30,10 @@ interface User {
   userId: string;
 }
 
+interface Course {
+  course_id: number;
+}
+
 // 포인트 배열로 총 거리를 계산하는 함수 (미터 단위)
 const getTotalDistance = (points: Coordinate[]): number => {
   let distance = 0;
@@ -41,10 +43,7 @@ const getTotalDistance = (points: Coordinate[]): number => {
   return distance;
 };
 
-const dummyCourses: Course[] = [
-  { course_id: 1, course_title: '한강 코스', course_content: '뚝섬 ~ 잠실', points: [] },
-  { course_id: 2, course_title: '서울숲 코스', course_content: '서울숲 ~ 성수', points: [] },
-];
+
 
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
@@ -68,6 +67,7 @@ export default function MapScreen() {
   // BottomSheet 관련 상태
   const [isVisible, setIsVisible] = useState(false);
 
+
   useLocation(setRegion);
 
   const openSaveModal = () => {
@@ -82,6 +82,7 @@ export default function MapScreen() {
     }
     setIsSaveModalVisible(true);
   };
+  
   const handleSavePoints = async () => {
     if (points.length === 0 || !user?.userId) {
       alert(!user?.userId ? '로그인이 필요합니다.' : '저장할 포인트가 없습니다.');
@@ -193,12 +194,12 @@ export default function MapScreen() {
             onPress={() => {
               if (region) {
                 handleToggleNearbyCourses(region);
-                handleToggleUserCourses(region);
+                handleToggleUserCourses(region); // 코스 정보
               setIsVisible(true)
               }
             }} // 근처 코스 불러오기 및 BottomSheet 열기
           >
-            <Text style={styles.iconText}>🔍</Text>
+            <MaterialIcons name="search" size={24} color="black" style={styles.iconText} />
           </TouchableOpacity>
         </View>
       </View>
@@ -318,10 +319,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   addButton: { // 추가
-    backgroundColor: '#fff', // 필요에 따라 색상 조정 가능
+    backgroundColor: '#A1CEFF', // 필요에 따라 색상 조정 가능
   },
   searchButton: { // 추가
-    backgroundColor: '#fff', // 필요에 따라 색상 조정 가능
+    backgroundColor: '#A1CEFF', // 필요에 따라 색상 조정 가능
   },
   buttonText: {
     fontSize: 18,
@@ -431,6 +432,5 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: '#333',
   },
-
 
 });

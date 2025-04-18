@@ -1,5 +1,4 @@
-import { useCourses } from '@/hooks/useCourses';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   Animated,
   PanResponder,
@@ -23,24 +22,23 @@ interface Course {
 interface Props {
   isVisible: boolean;
   onClose: () => void;
-  courses: Course[];
+  registeredCourses: Course[];
+  savedCourses: Course[];
 }
 
-export const NearbyBottomSheet: React.FC<Props> = ({
+export const Mybottomsheet: React.FC<Props> = ({
   isVisible,
   onClose,
-  courses,
+  registeredCourses,
+  savedCourses,
 }) => {
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [activeTab, setActiveTab] = useState<'registered' | 'saved'>('registered');
   const [currentPage, setCurrentPage] = useState(1);
-
   const itemsPerPage = 4;
 
   const translateY = useRef(new Animated.Value(height)).current;
-  
   const flatListRef = useRef<FlatList<any>>(null);
 
-  // const {coursesSave} = useCourses();
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 10,
@@ -82,12 +80,14 @@ export const NearbyBottomSheet: React.FC<Props> = ({
     }).start(onClose);
   };
 
+  const courses = activeTab === 'registered' ? registeredCourses : savedCourses;
   const totalPages = Math.ceil(courses.length / itemsPerPage);
 
-  
-  const pages = Array.from({ length: totalPages }, (_, pageIndex) =>
-    courses.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage)
-  );
+  const pages = useMemo(() => {
+    return Array.from({ length: totalPages }, (_, pageIndex) =>
+      courses.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage)
+    );
+  }, [courses]);
 
   const renderPagination = () => (
     <View style={styles.pagination}>
@@ -103,7 +103,7 @@ export const NearbyBottomSheet: React.FC<Props> = ({
           }}
           style={[
             styles.pageBtn,
-            currentPage === i + 1 && { backgroundColor: '#ccc' }, // 현재 페이지 강조
+            currentPage === i + 1 && { backgroundColor: '#ccc' },
           ]}
         >
           <Text style={styles.pageText}>{i + 1}</Text>
@@ -112,8 +112,6 @@ export const NearbyBottomSheet: React.FC<Props> = ({
     </View>
   );
 
-  
-
   return (
     <TouchableWithoutFeedback onPress={handleClose}>
       <View style={styles.overlay}>
@@ -121,53 +119,53 @@ export const NearbyBottomSheet: React.FC<Props> = ({
           style={[styles.sheet, { transform: [{ translateY }] }]}
           {...panResponder.panHandlers}
         >
-          {selectedCourse ? (
-            <View>
-              <TouchableOpacity onPress={() => setSelectedCourse(null)}>
-                <Text style={styles.backBtn}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.title}>{`${selectedCourse.course_id}. ${selectedCourse.course_title}`}</Text>
-              <Text style={styles.detailText}>코스 설명 : {selectedCourse.course_content}</Text>
-              <TouchableOpacity>
-                {/* <Text style={styles.saveIcon}  onPress={()=>({}) }>💾 저장</Text> */}
-                <Text style={styles.saveIcon}>💾 저장</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View>
-              <Text style={styles.title}>내 근처 코스</Text>
-              <FlatList
-                data={pages}
-                ref={flatListRef}
-                keyExtractor={(_, index) => index.toString()}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const page = Math.round(
-                    e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
-                  );
-                  setCurrentPage(page + 1);
-                }}
-                renderItem={({ item: courseGroup, index }) => (
-                  <View style={{ width: width - 32 }}>
-                    {courseGroup.map((item, idx) => (
-                      <TouchableOpacity
-                        key={item.course_id}
-                        style={styles.item}
-                        onPress={() => setSelectedCourse(item)}
-                      >
-                        <Text style={styles.itemText}>
-                          {(index * itemsPerPage) + idx + 1}. {item.course_title}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              />
-              {renderPagination()}
-            </View>
-          )}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'registered' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('registered');
+                setCurrentPage(1);
+              }}
+            >
+              <Text style={styles.tabText}>내 등록 코스</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'saved' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('saved');
+                setCurrentPage(1);
+              }}
+            >
+              <Text style={styles.tabText}>내 저장 코스</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={pages}
+            ref={flatListRef}
+            keyExtractor={(_, index) => index.toString()}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const page = Math.round(
+                e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
+              );
+              setCurrentPage(page + 1);
+            }}
+            renderItem={({ item: courseGroup, index }) => (
+              <View style={{ width: width - 32 }}>
+                {courseGroup.map((item, idx) => (
+                  <TouchableOpacity key={item.course_id} style={styles.item}>
+                    <Text style={styles.itemText}>
+                      {(index * itemsPerPage) + idx + 1}. {item.course_title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          />
+          {renderPagination()}
         </Animated.View>
       </View>
     </TouchableWithoutFeedback>
@@ -184,23 +182,31 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    height: height * 0.35,
+    height: height * 0.3,
     backgroundColor: '#F5F8FC',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
   },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 22,
-    marginBottom: 16,
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
   },
-  title2: {
-    fontWeight: 'bold',
-    fontSize: 22,
-    marginBottom: 24,
-    marginLeft: 100,
-    textAlign: 'center',
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: '#ccc',
+  },
+  activeTab: {
+    backgroundColor: '#fff',
+    borderBottomColor: '#000',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   item: {
     paddingVertical: 8,
@@ -208,31 +214,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderBottomColor: '#fff',
     backgroundColor: '#A1CEFF',
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   itemText: {
     fontSize: 18,
     fontWeight: '500',
-    paddingRight: 12,
-  },
-  backBtn: {
-    fontSize: 24,
-    marginBottom: 12,
-    marginRight: 12,
-    fontWeight: 'bold',
-  },
-  detailText: {
-    fontSize: 16,
-    marginBottom: 8,
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#A1CEFF',
-    height: 100,
-    borderRadius: 12,
-  },
-  saveIcon: {
-    fontSize: 16,
-    marginTop: 12,
-    alignSelf: 'flex-end',
   },
   pagination: {
     flexDirection: 'row',
