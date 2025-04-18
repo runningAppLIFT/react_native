@@ -197,7 +197,7 @@ export default function CrewBoard() {
               renderItem={renderItem}
               contentContainerStyle={styles.boardContainer}
             />
-            <TouchableOpacity style={styles.circleButton} onPress={() => router.push('/(tabs)/Community/addPost')}>
+            <TouchableOpacity style={styles.circleButton} onPress={() => router.push('/(tabs)/Community/Crew/addCrewPost')}>
               <Text style={styles.circlebtntext}>+</Text>
             </TouchableOpacity>
           </ThemedView>
