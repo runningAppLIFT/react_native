@@ -1,5 +1,5 @@
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -7,23 +7,9 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import { usePosts, Post } from '@/hooks/community/usePosts';
 
-type Post = {
-  id: string;
-  title: string;
-  content: string;
-  name: string;
-  time: number;
-  like: number;
-  comment: number;
-};
-
-const initialPosts: Post[] = [
-  { id: '1', title: '첫 번째 게시글', content: '이것은 첫 번째 게시글의 내용입니다.', name: '러닝광', time: 1, like: 2, comment: 4 },
-  { id: '2', title: '두 번째 게시글', content: '이것은 두 번째 게시글의 내용입니다.', name: '러닝광', time: 2, like: 4, comment: 2 },
-  { id: '3', title: '세 번째 게시글', content: '이것은 세 번째 게시글의 내용입니다.', name: '러닝광', time: 3, like: 1, comment: 1 },
-];
-
+// 공지사항 데이터 (정적 데이터로 유지)
 const notices = [
   { id: 1, title: '게시판 이용 안내사항', date: '2025.03.28', content: '게시판 이용 방법과 규칙에 대해 안내드립니다.' },
   { id: 2, title: '새로운 기능 추가 안내', date: '2025.03.30', content: '새로운 기능이 추가되었습니다. 자세한 내용을 확인하세요.' },
@@ -31,39 +17,75 @@ const notices = [
 ];
 
 export default function CommunityIndex() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [text, setText] = useState('');
   const router = useRouter();
+  const { posts, isLoading, error, loadInitialPosts, loadMore, pageInfo } = usePosts();
 
+  // 초기 데이터 로드
+  useEffect(() => {
+    loadInitialPosts();
+  }, [loadInitialPosts]);
+
+  // 제스처 이벤트 (오른쪽 스와이프 시 Crew 화면으로 이동)
   const onGestureEvent = ({ nativeEvent }: { nativeEvent: { translationX: number } }) => {
     if (nativeEvent.translationX < -150) {
       router.push('/(tabs)/Community/Crew');
     }
   };
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(text.toLowerCase())
-  );
-
+  // 게시글 렌더링
   const renderItem = ({ item }: { item: Post }) => (
     <TouchableOpacity
       style={styles.postContainer}
-      onPress={() => router.push({ pathname: '/(tabs)/Community/postDetail', params: { post: JSON.stringify(item) } })}
+      onPress={() =>
+        router.push({
+          pathname: '/(tabs)/Community/postDetail',
+          params: { post: JSON.stringify(item) },
+        })
+      }
     >
-      <ThemedText type="subtitle">{item.title}</ThemedText>
-      <ThemedText>{item.content}</ThemedText>
+      <ThemedText type="subtitle">{item.comm_title}</ThemedText>
+      <ThemedText>{item.comm_detail}</ThemedText>
       <View style={styles.contentinner}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ marginRight: 10 }}>{item.name}</Text>
-          <Text>{`${item.time}시간 전`}</Text>
+          <Text style={{ marginRight: 10 }}>작성자 {item.user_id}</Text>
+          <Text>{new Date(item.created_at).toLocaleDateString()}</Text>
         </View>
         <View style={styles.likeContainer}>
           <IconSymbol name="message" color="#000" />
-          <Text>{`${item.comment}`}</Text>
+          <Text>0</Text> {/* 댓글 수는 API에 없으므로 0으로 표시 */}
         </View>
       </View>
     </TouchableOpacity>
   );
+
+  // ListFooterComponent: 스크롤 끝에서의 UI
+  const renderFooter = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.footerContainer}>
+          <ActivityIndicator size="small" color="#0066FF" />
+          <Text style={styles.footerText}>로딩 중...</Text>
+        </View>
+      );
+    }
+    if (pageInfo.hasNextPage) {
+      return (
+        <TouchableOpacity onPress={loadMore} style={styles.footerContainer}>
+          <Text style={[styles.footerText, { color: '#0066FF', fontWeight: '600' }]}>
+            다음 게시물 불러오기
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+    if (posts.length > 0 && !pageInfo.hasNextPage) {
+      return (
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>마지막 게시물입니다.</Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <PanGestureHandler
@@ -72,10 +94,12 @@ export default function CommunityIndex() {
     >
       <Animated.View style={{ flex: 1 }}>
         <ThemedView style={styles.container}>
+          {/* 헤더 */}
           <ThemedView style={styles.headerImageContainer}>
             <ThemedText type="title" style={styles.headerText}>자유게시판</ThemedText>
           </ThemedView>
 
+          {/* 공지사항 Swiper */}
           <ThemedView style={styles.noticeContainer}>
             <ThemedText style={styles.noticeTop}>공지사항</ThemedText>
             <View style={styles.notice}>
@@ -93,7 +117,12 @@ export default function CommunityIndex() {
                 {notices.map(notice => (
                   <TouchableOpacity
                     key={notice.id}
-                    onPress={() => router.push({ pathname: '/(tabs)/Community/postDetail', params: { id: notice.id } })}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(tabs)/Community/postDetail',
+                        params: { id: notice.id },
+                      })
+                    }
                   >
                     <ThemedText style={styles.noticetitle}>{notice.title}</ThemedText>
                     <ThemedText>{notice.date}</ThemedText>
@@ -103,17 +132,29 @@ export default function CommunityIndex() {
             </View>
           </ThemedView>
 
+          {/* 게시글 리스트 */}
+          {error && <Text style={[styles.statusText, { color: 'red' }]}>{error}</Text>}
+          {!isLoading && !error && posts.length === 0 && (
+            <Text style={styles.statusText}>게시글이 없습니다.</Text>
+          )}
           <FlatList
-            data={filteredPosts}
-            keyExtractor={(item) => item.id}
+            data={posts}
+            keyExtractor={(item) => item.comm_number.toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.boardContainer}
-            nestedScrollEnabled={true} // 중첩 스크롤 활성화
-            initialNumToRender={10} // 렌더링 최적화
-            windowSize={5} // 렌더링 최적화
+            nestedScrollEnabled={true}
+            initialNumToRender={10}
+            windowSize={5}
+            onEndReached={() => pageInfo.hasNextPage && loadMore()} // 더보기 호출
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={renderFooter} // 푸터 컴포넌트 추가
           />
 
-          <TouchableOpacity style={styles.circleButton} onPress={() => router.push('/(tabs)/Community/addPost')}>
+          {/* 플로팅 버튼 (게시글 추가) */}
+          <TouchableOpacity
+            style={styles.circleButton}
+            onPress={() => router.push('/(tabs)/Community/addPost')}
+          >
             <Text style={styles.circlebtntext}>+</Text>
           </TouchableOpacity>
         </ThemedView>
@@ -122,6 +163,7 @@ export default function CommunityIndex() {
   );
 }
 
+// 스타일 수정 및 추가
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -152,7 +194,7 @@ const styles = StyleSheet.create({
   boardContainer: {
     paddingVertical: 4,
     paddingHorizontal: 15,
-    paddingBottom: Platform.OS === 'ios' ? 80 : 10, // 안드로이드에서 패딩 감소
+    paddingBottom: Platform.OS === 'ios' ? 80 : 10,
   },
   postContainer: {
     padding: 20,
@@ -212,7 +254,7 @@ const styles = StyleSheet.create({
   },
   circleButton: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 90 : 10, // 안드로이드에서 패딩 감소
+    bottom: Platform.OS === 'ios' ? 90 : 10,
     right: 30,
     width: 64,
     height: 64,
@@ -230,5 +272,19 @@ const styles = StyleSheet.create({
     fontSize: 36,
     color: '#FFFFFF',
     fontWeight: '800',
+  },
+  statusText: {
+    textAlign: 'center',
+    fontSize: 16,
+    marginVertical: 20,
+  },
+  footerContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    fontSize: 16,
+    color: '#333',
   },
 });
