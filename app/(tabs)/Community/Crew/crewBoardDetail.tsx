@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
-    paddingBottom: Platform.OS === 'ios' ? 70 : 50, // Extra padding for Android to account for tab bar
+    paddingBottom: Platform.OS === 'ios' ? 70 : 20, // Extra padding for Android to account for tab bar
   },
   replyingTo: {
     flexDirection: 'row',

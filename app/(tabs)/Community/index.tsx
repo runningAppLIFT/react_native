@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
@@ -66,7 +66,10 @@ export default function CommunityIndex() {
   );
 
   return (
-    <PanGestureHandler onGestureEvent={onGestureEvent}>
+    <PanGestureHandler
+      onGestureEvent={onGestureEvent}
+      activeOffsetX={[-10, 10]} // 스와이프 민감도 조정
+    >
       <Animated.View style={{ flex: 1 }}>
         <ThemedView style={styles.container}>
           <ThemedView style={styles.headerImageContainer}>
@@ -99,12 +102,17 @@ export default function CommunityIndex() {
               </Swiper>
             </View>
           </ThemedView>
+
           <FlatList
             data={filteredPosts}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.boardContainer}
+            nestedScrollEnabled={true} // 중첩 스크롤 활성화
+            initialNumToRender={10} // 렌더링 최적화
+            windowSize={5} // 렌더링 최적화
           />
+
           <TouchableOpacity style={styles.circleButton} onPress={() => router.push('/(tabs)/Community/addPost')}>
             <Text style={styles.circlebtntext}>+</Text>
           </TouchableOpacity>
@@ -117,13 +125,13 @@ export default function CommunityIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F8FC', // 부드러운 밝은 톤 배경
+    backgroundColor: '#F5F8FC',
   },
   headerImageContainer: {
     height: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0066FF', // 모던한 파란색
+    backgroundColor: '#0066FF',
     marginBottom: 20,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -141,21 +149,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     position: 'absolute',
   },
-  btnplus: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-  },
-  btnplustext: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    
-  },
   boardContainer: {
     paddingVertical: 4,
     paddingHorizontal: 15,
-    paddingBottom: 80, // 하단 탭 높이만큼 여백 추가
+    paddingBottom: Platform.OS === 'ios' ? 80 : 10, // 안드로이드에서 패딩 감소
   },
   postContainer: {
     padding: 20,
@@ -203,7 +200,7 @@ const styles = StyleSheet.create({
   notice: {
     paddingVertical: 12,
     flexDirection: 'column',
-    paddingHorizontal: 16, // 좌우 여백 추가
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     minHeight: 90,
@@ -213,19 +210,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    marginHorizontal: 15,
-    marginBottom: 15,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0', // 밝은 회색 테두리
-  },
   circleButton: {
     position: 'absolute',
-    bottom: 90,
+    bottom: Platform.OS === 'ios' ? 90 : 10, // 안드로이드에서 패딩 감소
     right: 30,
     width: 64,
     height: 64,

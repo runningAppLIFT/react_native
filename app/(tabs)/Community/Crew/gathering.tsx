@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -81,16 +81,16 @@ export default function Gathering() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* 상단 헤더 (기존 디자인 유지) */}
+      {/* 상단 헤더 */}
       <View style={styles.headerImageContainer}>
         <ThemedText type="title" style={styles.headerTitle}>
           크루
         </ThemedText>
       </View>
 
-      {/* 크루 소개 내용 */}
+      {/* 크루 모임 내용 */}
       <View style={styles.contentContainer}>
-        {/* 페이지 이동 버튼들 */}
+        {/* 탭 네비게이션 */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === '소개' && styles.activeTab]}
@@ -144,29 +144,34 @@ export default function Gathering() {
             </Text>
             {activeTab === '게시판' && <View style={styles.underline} />}
           </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === '채팅' && styles.activeTab]}
-          onPress={() => {
-            setActiveTab('채팅');
-            router.push({
-              pathname: '/(tabs)/Community/Crew/crewChat',
-              params: {
-                id: id || dummyCrews[0].id,
-                name: name || dummyCrews[0].name,
-                members: members || dummyCrews[0].members.toString(),
-              },
-            });
-          }}
-        >
-          <Text style={[styles.tabText, activeTab === '채팅' && styles.activeTabText]}>
-            채팅
-          </Text>
-          {activeTab === '채팅' && <View style={styles.underline} />}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === '채팅' && styles.activeTab]}
+            onPress={() => {
+              setActiveTab('채팅');
+              router.push({
+                pathname: '/(tabs)/Community/Crew/crewChat',
+                params: {
+                  id: id || dummyCrews[0].id,
+                  name: name || dummyCrews[0].name,
+                  members: members || dummyCrews[0].members.toString(),
+                },
+              });
+            }}
+          >
+            <Text style={[styles.tabText, activeTab === '채팅' && styles.activeTabText]}>
+              채팅
+            </Text>
+            {activeTab === '채팅' && <View style={styles.underline} />}
+          </TouchableOpacity>
         </View>
 
-        {/* 전체 스크롤 가능한 내용 */}
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {/* 스크롤 가능한 내용 */}
+        <ScrollView
+          contentContainerStyle={styles.scrollViewContent}
+          nestedScrollEnabled={true} // 중첩 스크롤 활성화
+          showsVerticalScrollIndicator={true} // 스크롤바 표시
+          keyboardShouldPersistTaps="handled" // SearchBar 클릭 시 스크롤 유지
+        >
           <SearchBar value={text} onChangeText={setText} />
           <View>
             <Text style={styles.sectionHeader}>나의 모임</Text>
@@ -218,8 +223,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   contentContainer: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10, // Increase padding for Android
   },
   tabContainer: {
     flexDirection: 'row',

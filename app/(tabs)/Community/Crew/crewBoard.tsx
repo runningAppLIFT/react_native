@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { useState } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
@@ -96,7 +96,10 @@ export default function CrewBoard() {
   );
 
   return (
-    <PanGestureHandler onGestureEvent={onGestureEvent}>
+    <PanGestureHandler
+      onGestureEvent={onGestureEvent}
+      activeOffsetX={[-10, 10]} // 스와이프 민감도 조정
+    >
       <Animated.View style={{ flex: 1 }}>
         <ThemedView style={styles.container}>
           {/* 상단 헤더 */}
@@ -207,12 +210,21 @@ export default function CrewBoard() {
                 </Swiper>
               </View>
             </ThemedView>
-            <FlatList
-              data={filteredPosts}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              contentContainerStyle={styles.boardContainer}
-            />
+            {filteredPosts.length === 0 ? (
+              <ThemedText style={{ textAlign: 'center', marginTop: 20 }}>
+                게시글이 없습니다.
+              </ThemedText>
+            ) : (
+              <FlatList
+                data={filteredPosts}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                contentContainerStyle={styles.boardContainer}
+                nestedScrollEnabled={true} // 중첩 스크롤 활성화
+                initialNumToRender={10} // 렌더링 최적화
+                windowSize={5} // 렌더링 최적화
+              />
+            )}
             <TouchableOpacity style={styles.circleButton} onPress={() => router.push('/(tabs)/Community/Crew/addCrewPost')}>
               <Text style={styles.circlebtntext}>+</Text>
             </TouchableOpacity>
@@ -282,11 +294,10 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 15,
-    paddingBottom: 80,
   },
   boardContainer: {
     paddingVertical: 4,
-    paddingBottom: 80, // 하단 탭 높이만큼 여백 추가
+    paddingBottom: Platform.OS === 'ios' ? 80 : 20, // 안드로이드에서 패딩 증가
   },
   postContainer: {
     padding: 20,
@@ -345,7 +356,7 @@ const styles = StyleSheet.create({
   },
   circleButton: {
     position: 'absolute',
-    bottom: 90,
+    bottom: Platform.OS === 'ios' ? 90 : 10, // 안드로이드에서 버튼 위치 조정
     right: 30,
     width: 64,
     height: 64,
@@ -358,6 +369,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
+    zIndex: 10, // 버튼이 리스트 위에 표시되도록
   },
   circlebtntext: {
     fontSize: 36,

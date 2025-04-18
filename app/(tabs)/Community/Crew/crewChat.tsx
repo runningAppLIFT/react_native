@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   chatContainer: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 160 : 160,
+    paddingBottom: Platform.OS === 'ios' ? 160 : 60,
   },
   messageList: {
     flexGrow: 1,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 80 : 80,
+    bottom: Platform.OS === 'ios' ? 80 : 10,
     left: 16,
     right: 16,
   },
