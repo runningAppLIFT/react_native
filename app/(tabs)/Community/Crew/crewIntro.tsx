@@ -75,7 +75,14 @@ export default function CrewIntro() {
             style={[styles.tabButton, activeTab === '모임' && styles.activeTab]}
             onPress={() => {
               setActiveTab('모임');
-              router.push('/(tabs)/Community/Crew/gathering');
+              router.push({
+                pathname: '/(tabs)/Community/Crew/gathering',
+                params: {
+                  id: id || dummyCrews[0].id,
+                  name: name || dummyCrews[0].name,
+                  members: members || dummyCrews[0].members.toString(),
+                },
+              });
             }}
           >
             <Text style={[styles.tabText, activeTab === '모임' && styles.activeTabText]}>
@@ -84,26 +91,42 @@ export default function CrewIntro() {
             {activeTab === '모임' && <View style={styles.underline} />}
           </TouchableOpacity>
           <TouchableOpacity
-              style={[styles.tabButton, activeTab === '게시판' && styles.activeTab]}
-              onPress={() => {
-                setActiveTab('게시판');
-                router.push({
-                  pathname: '/(tabs)/Community/Crew/crewBoard',
-                  params: {
-                    id: id || dummyCrews[0].id,
-                    name: name || dummyCrews[0].name,
-                    members: members || dummyCrews[0].members.toString(),
-                  },
-                });
-              }}
-            >
-              <Text style={[styles.tabText, activeTab === '게시판' && styles.activeTabText]}>
-                게시판
-              </Text>
-              {activeTab === '게시판' && <View style={styles.underline} />}
-            </TouchableOpacity>
-          <TouchableOpacity style={styles.tabButton}>
-            <Text style={styles.tabText}>채팅</Text>
+            style={[styles.tabButton, activeTab === '게시판' && styles.activeTab]}
+            onPress={() => {
+              setActiveTab('게시판');
+              router.push({
+                pathname: '/(tabs)/Community/Crew/crewBoard',
+                params: {
+                  id: id || dummyCrews[0].id,
+                  name: name || dummyCrews[0].name,
+                  members: members || dummyCrews[0].members.toString(),
+                },
+              });
+            }}
+          >
+            <Text style={[styles.tabText, activeTab === '게시판' && styles.activeTabText]}>
+              게시판
+            </Text>
+            {activeTab === '게시판' && <View style={styles.underline} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === '채팅' && styles.activeTab]}
+            onPress={() => {
+              setActiveTab('채팅');
+              router.push({
+                pathname: '/(tabs)/Community/Crew/crewChat',
+                params: {
+                  id: id || dummyCrews[0].id,
+                  name: name || dummyCrews[0].name,
+                  members: members || dummyCrews[0].members.toString(),
+                },
+              });
+            }}
+          >
+            <Text style={[styles.tabText, activeTab === '채팅' && styles.activeTabText]}>
+              채팅
+            </Text>
+            {activeTab === '채팅' && <View style={styles.underline} />}
           </TouchableOpacity>
         </View>
 

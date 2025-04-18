@@ -144,7 +144,7 @@ export default function CrewBoard() {
               onPress={() => {
                 setActiveTab('게시판');
                 router.push({
-                  pathname: '/(tabs)/Community/Crew/communityIndex',
+                  pathname: '/(tabs)/Community/Crew/crewBoard',
                   params: {
                     id: id || dummyCrews[0].id,
                     name: name || dummyCrews[0].name,
