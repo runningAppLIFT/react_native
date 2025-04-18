@@ -1,57 +1,41 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { usePostDetail } from '@/hooks/community/usePostDetail';
+import { usePostComments } from '@/hooks/community/usePostComments';
 
 export default function PostDetail() {
   const router = useRouter();
   const { post } = useLocalSearchParams();
+  const postId = typeof post === 'string' ? Number(JSON.parse(post).comm_number) : null;
 
-  // 더미 데이터: 댓글 리스트를 포함하는 게시글 데이터
-  const parsedPost = {
-    title: '러닝할 때 수분섭취 어떻게들 하시나요?',
-    name: '러닝광',
-    time: '3',
-    content: '러닝 후 저는 커피를 마시곤 하는데요. 마셔도 갈증 해소가 잘 안되는 것 같아요. 다들 러닝 후에 어떤 거 마시세요??',
-    like: 12,
-    comment: 3,
-    comments: [
-      {
-        id: '1',
-        author: '피자추',
-        content: '커피보다는 이온음료나 물 드셔보세요!',
-        date: '03.29 오후 3:43',
-        replies: [],
-      },
-      {
-        id: '2',
-        author: '감사합니다',
-        content: '정말 꿀팁 감사합니다!',
-        date: '03.29 오후 4:12',
-        replies: [],
-      },
-      {
-        id: '3',
-        author: '마라톤러',
-        content: '저는 물+소금 조금씩 섞어서 마십니다!',
-        date: '03.29 오후 4:22',
-        replies: [],
-      },
-    ],
-  };
+  const { post: postData, isLoading: isPostLoading, error: postError } = usePostDetail(postId);
+  const { comments, isLoading: isCommentsLoading, error: commentsError, refetch } = usePostComments(postId);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
-  const [comments, setComments] = useState(parsedPost.comments);
 
   const handleEdit = () => {
-    console.log('Editing post:', parsedPost);
+    console.log('Editing post:', postData);
     setModalVisible(false);
   };
 
   const handleDelete = () => {
-    console.log('Deleting post:', parsedPost);
+    console.log('Deleting post:', postData);
     setModalVisible(false);
   };
 
@@ -59,38 +43,55 @@ export default function PostDetail() {
     if (!commentText.trim()) return;
 
     const newComment = {
-      id: Date.now().toString(),
+      comment_id: Date.now().toString(),
       author: '현재 사용자', // 실제 앱에서는 로그인한 사용자 정보 사용
       content: commentText,
-      date: new Date().toLocaleString('ko-KR', {
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      }),
+      created_at: new Date().toISOString(),
       replies: [],
     };
 
     if (replyingTo) {
-      setComments(comments.map(comment => {
-        if (comment.id === replyingTo.id) {
-          return { ...comment, replies: [...comment.replies, newComment] };
-        }
-        return comment;
-      }));
+      // Update the replies array for the specific comment
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment.comment_id === replyingTo.comment_id
+            ? { ...comment, replies: [...comment.replies, newComment] }
+            : comment
+        )
+      );
       setReplyingTo(null);
     } else {
-      setComments([...comments, newComment]);
+      // Add new comment to the comments array
+      setComments((prevComments) => [...prevComments, newComment]);
     }
 
     setCommentText('');
+    // TODO: POST request to submit comment to API and refetch comments
+    // refetch();
   };
 
-  if (!parsedPost) {
+  if (isPostLoading || isCommentsLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>게시글 데이터를 불러올 수 없습니다.</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0066FF" />
+          <Text style={styles.statusText}>데이터를 불러오는 중...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (postError || !postData || commentsError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.statusText}>
+            {postError || commentsError || '데이터를 불러올 수 없습니다.'}
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryButtonText}>뒤로 가기</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -116,24 +117,39 @@ export default function PostDetail() {
         {/* Content */}
         <ScrollView style={styles.content}>
           <View style={styles.postHeader}>
-            <Text style={styles.author}>{parsedPost.name}</Text>
-            <Text style={styles.date}>{`${parsedPost.time}시간 전`}</Text>
+            <Text style={styles.author}>사용자 {postData.user_id}</Text>
+            <Text style={styles.date}>
+              {new Date(postData.created_at).toLocaleString('ko-KR', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
           </View>
-          <Text style={styles.postTitle}>{parsedPost.title}</Text>
+          <Text style={styles.postTitle}>{postData.comm_title}</Text>
           <View style={styles.postBody}>
-            <Text style={styles.postContent}>{parsedPost.content}</Text>
+            <Text style={styles.postContent}>{postData.comm_detail}</Text>
           </View>
 
           {/* 댓글 영역 */}
           <View style={styles.commentsSection}>
             <View style={styles.commentsHeader}>
               <Text style={styles.commentsTitle}>댓글</Text>
-              <Text style={styles.likes}>💬{comments.length}</Text>
+              <Text style={styles.likes}>💬 {comments.length}</Text>
             </View>
             {comments.map((comment) => (
-              <View key={comment.id} style={styles.commentBox}>
+              <View key={comment.comment_id} style={styles.commentBox}>
                 <Text style={styles.commentAuthor}>{comment.author}</Text>
-                <Text style={styles.commentDate}>{comment.date}</Text>
+                <Text style={styles.commentDate}>
+                  {new Date(comment.created_at).toLocaleString('ko-KR', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                  })}
+                </Text>
                 <Text style={styles.commentContent}>{comment.content}</Text>
                 <TouchableOpacity
                   style={styles.replyButton}
@@ -142,17 +158,27 @@ export default function PostDetail() {
                   <Text style={styles.replyButtonText}>답글</Text>
                 </TouchableOpacity>
                 {/* 대댓글 렌더링 */}
-                {comment.replies.map((reply, index) => (
-                  <View key={index} style={styles.replyBox}>
+                {comment.replies.map((reply) => (
+                  <View key={reply.comment_id} style={styles.replyBox}>
                     <Text style={styles.commentAuthor}>{reply.author}</Text>
-                    <Text style={styles.commentDate}>{reply.date}</Text>
+                    <Text style={styles.commentDate}>
+                      {new Date(reply.created_at).toLocaleString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </Text>
                     <Text style={styles.commentContent}>{reply.content}</Text>
                   </View>
                 ))}
               </View>
             ))}
             {!comments.length && (
-              <Text style={{ color: '#777', marginTop: 8 }}>댓글이 없습니다.</Text>
+              <Text style={{ color: '#777', marginTop: 8 }}>
+                댓글이 없습니다.
+              </Text>
             )}
           </View>
         </ScrollView>
@@ -172,13 +198,18 @@ export default function PostDetail() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.commentInput}
-              placeholder={replyingTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
+              placeholder={
+                replyingTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'
+              }
               value={commentText}
               onChangeText={setCommentText}
               multiline
             />
             <TouchableOpacity
-              style={[styles.submitButton, !commentText.trim() && styles.disabledButton]}
+              style={[
+                styles.submitButton,
+                !commentText.trim() && styles.disabledButton,
+              ]}
               onPress={handleCommentSubmit}
               disabled={!commentText.trim()}
             >
@@ -216,6 +247,7 @@ export default function PostDetail() {
   );
 }
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -230,7 +262,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#0066FF',
-    },
+  },
   headerText: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -275,7 +307,7 @@ const styles = StyleSheet.create({
   },
   commentsSection: {
     marginTop: 20,
-    marginBottom: 20, // Add some bottom margin for better spacing
+    marginBottom: 20,
   },
   commentsTitle: {
     fontSize: 18,
@@ -331,7 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
-    paddingBottom: Platform.OS === 'ios' ? 70 : 20, // Extra padding for Android to account for tab bar
+    paddingBottom: Platform.OS === 'ios' ? 70 : 20,
   },
   replyingTo: {
     flexDirection: 'row',
@@ -391,5 +423,33 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 16,
     color: '#007AFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  statusText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#0066FF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
