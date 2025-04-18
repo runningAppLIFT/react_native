@@ -43,6 +43,11 @@ interface CreateCommentResponse {
   comment: CommentApiResponse;
 }
 
+// API 응답 인터페이스 (댓글 삭제)
+interface DeleteCommentResponse {
+  message: string;
+}
+
 export const usePostComments = (postId: number) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -206,10 +211,66 @@ export const usePostComments = (postId: number) => {
     }
   }, [postId]);
 
+  // 댓글 삭제
+  const deleteComment = useCallback(async (commentId: number) => {
+    if (!postId || !commentId) {
+      setError('게시글 ID 또는 댓글 ID가 없습니다.');
+      throw new Error('Invalid post ID or comment ID');
+    }
+
+    setIsLoading(true);
+    try {
+      const url = `${API_URL}/communities/posts/${postId}/comments/${commentId}`;
+      console.log('Deleting comment from URL:', url); // 디버깅
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      console.log('Delete comment response status:', response.status); // 디버깅
+      if (response.status === 204) {
+        // 204 No Content: 응답 본문이 없으므로 JSON 파싱 생략
+        console.log('Comment deleted successfully'); // 디버깅
+      } else if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Delete comment error response:', errorText); // 디버깅
+        throw new Error('댓글 삭제에 실패했습니다.');
+      } else {
+        // 다른 성공 상태 코드(예: 200)의 경우 JSON 파싱
+        const result: DeleteCommentResponse = await response.json();
+        console.log('Delete comment API result:', result); // 디버깅
+      }
+
+      // Update local state to remove the deleted comment
+      setComments((prevComments) => {
+        const removeComment = (comments: Comment[]): Comment[] => {
+          return comments
+            .filter((comment) => comment.coment_id !== commentId)
+            .map((comment) => ({
+              ...comment,
+              replies: removeComment(comment.replies),
+            }));
+        };
+        return removeComment(prevComments);
+      });
+
+      setError(null);
+      return { message: 'Comment deleted successfully' };
+    } catch (err: any) {
+      console.error('Delete comment error:', err.message); // 디버깅
+      setError(`댓글 삭제에 실패했습니다: ${err.message}`);
+      throw err;
+    } finally {
+      setIsLoading(false);
+      console.log('Delete comment isLoading set to false'); // 디버깅
+    }
+  }, [postId]);
+
   // 초기 데이터 로드
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
 
-  return { comments, setComments, isLoading, error, refetch: fetchComments, createComment };
+  return { comments, setComments, isLoading, error, refetch: fetchComments, createComment, deleteComment };
 };

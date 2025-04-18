@@ -17,20 +17,30 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { usePostDetail } from '@/hooks/community/usePostDetail';
 import { usePostComments, Comment } from '@/hooks/community/useComments';
-import { useAuth } from '@/hooks/authContext'; // Import useAuth
+import { useAuth } from '@/hooks/authContext';
 
 export default function PostDetail() {
   const router = useRouter();
   const { post } = useLocalSearchParams();
   const postId = typeof post === 'string' ? Number(JSON.parse(post).comm_number) : null;
 
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user } = useAuth();
   const { post: postData, isLoading: isPostLoading, error: postError } = usePostDetail(postId);
-  const { comments, setComments, isLoading: isCommentsLoading, error: commentsError, refetch, createComment } = usePostComments(postId);
+  const { 
+    comments, 
+    setComments, 
+    isLoading: isCommentsLoading, 
+    error: commentsError, 
+    refetch, 
+    createComment,
+    deleteComment 
+  } = usePostComments(postId);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
 
   const handleEdit = () => {
     console.log('Editing post:', postData);
@@ -57,7 +67,7 @@ export default function PostDetail() {
       const commentData = {
         user_id: user.userId,
         content: commentText,
-        parent_comment_id: replyingTo?.coment_id || null, // 대댓글인 경우 부모 댓글 ID 설정
+        parent_comment_id: replyingTo?.coment_id || null,
       };
       console.log('댓글 전송 데이터:', commentData);
   
@@ -65,12 +75,25 @@ export default function PostDetail() {
   
       setCommentText('');
       setReplyingTo(null);
-
-      refetch(); 
+      refetch();
       Alert.alert('성공', '댓글이 작성되었습니다.');
-      
     } catch (err) {
       Alert.alert('오류', commentsError || '댓글 작성에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    if (!commentToDelete) return;
+
+    try {
+      await deleteComment(commentToDelete);
+      setDeleteModalVisible(false);
+      setCommentToDelete(null);
+      await refetch(); // 삭제 후 즉시 댓글 목록 새로고침
+      Alert.alert('성공', '댓글이 삭제되었습니다.');
+    } catch (err) {
+      console.error('댓글 삭제 에러:', err); // 디버깅용 로그
+      Alert.alert('오류', '댓글 삭제에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -142,48 +165,70 @@ export default function PostDetail() {
               <Text style={styles.commentsTitle}>댓글</Text>
               <Text style={styles.likes}>💬 {comments.length}</Text>
             </View>
-            {/* 댓글 렌더링 */}
             {(comments || []).map((comment) => (
               <View key={comment.coment_id} style={styles.commentBox}>
-                <Text style={styles.commentAuthor}>{comment.author}</Text>
-                <Text style={styles.commentDate}>
-                {new Date(comment.created_at).toLocaleString('ko-KR', {
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                })}
-              </Text>
-              <Text style={styles.commentContent}>{comment.content}</Text>
-              <TouchableOpacity
-                style={styles.replyButton}
-                onPress={() => {
-                  console.log('답글 대상 댓글:', comment);
-                  setReplyingTo(comment);
-                }}
-              >
-                <Text style={styles.replyButtonText}>답글</Text>
-              </TouchableOpacity>
-        
-                  {/* 대댓글 렌더링 - 안전하게 처리 */}
-              {comment.replies && comment.replies.map((reply) => (
-                <View key={reply.coment_id} style={styles.replyBox}>
-                  <Text style={styles.commentAuthor}>{reply.author}</Text>
-                  <Text style={styles.commentDate}>
-                    {new Date(reply.created_at).toLocaleString('ko-KR', {
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true,
-                    })}
-                  </Text>
-                  <Text style={styles.commentContent}>{reply.content}</Text>
+                <View style={styles.commentHeader}>
+                  <Text style={styles.commentAuthor}>{comment.author}</Text>
+                  {user && user.userId === comment.user_id && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCommentToDelete(comment.coment_id);
+                        setDeleteModalVisible(true);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  )}
                 </View>
-              ))}
-            </View>
-    ))      }
+                <Text style={styles.commentDate}>
+                  {new Date(comment.created_at).toLocaleString('ko-KR', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                  })}
+                </Text>
+                <Text style={styles.commentContent}>{comment.content}</Text>
+                <TouchableOpacity
+                  style={styles.replyButton}
+                  onPress={() => {
+                    console.log('답글 대상 댓글:', comment);
+                    setReplyingTo(comment);
+                  }}
+                >
+                  <Text style={styles.replyButtonText}>답글</Text>
+                </TouchableOpacity>
+
+                {comment.replies && comment.replies.map((reply) => (
+                  <View key={reply.coment_id} style={styles.replyBox}>
+                    <View style={styles.commentHeader}>
+                      <Text style={styles.commentAuthor}>{reply.author}</Text>
+                      {user && user.userId === reply.user_id && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setCommentToDelete(reply.coment_id);
+                            setDeleteModalVisible(true);
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <Text style={styles.commentDate}>
+                      {new Date(reply.created_at).toLocaleString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </Text>
+                    <Text style={styles.commentContent}>{reply.content}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
             {!comments.length && (
               <Text style={{ color: '#777', marginTop: 8 }}>
                 댓글이 없습니다.
@@ -232,7 +277,7 @@ export default function PostDetail() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Modal */}
+      {/* Post Action Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -256,11 +301,41 @@ export default function PostDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Comment Delete Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>댓글을 삭제하시겠습니까?</Text>
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setCommentToDelete(null);
+                }}
+              >
+                <Text style={styles.modalText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleDeleteComment}
+              >
+                <Text style={[styles.modalText, { color: '#FF3B30' }]}>삭제</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -342,6 +417,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
   },
   replyBox: {
     paddingVertical: 8,
@@ -428,41 +509,35 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 10,
     padding: 20,
   },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   modalButton: {
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    alignItems: 'center',
+    borderBottomWidth: 0,
+    marginRight: 10,
+  },
+  deleteButton: {
+    flex: 1,
+    alignItems: 'center',
+    borderBottomWidth: 0,
+  },
   modalText: {
     fontSize: 16,
     color: '#007AFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  statusText: {
-    fontSize: 16,
-    color: '#333',
     textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#0066FF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
 });
