@@ -1,5 +1,5 @@
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -158,8 +158,24 @@ export default function CrewBoard() {
               </Text>
               {activeTab === '게시판' && <View style={styles.underline} />}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.tabButton}>
-              <Text style={styles.tabText}>채팅</Text>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === '채팅' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('채팅');
+                router.push({
+                  pathname: '/(tabs)/Community/Crew/crewChat',
+                  params: {
+                    id: id || dummyCrews[0].id,
+                    name: name || dummyCrews[0].name,
+                    members: members || dummyCrews[0].members.toString(),
+                  },
+                });
+              }}
+            >
+              <Text style={[styles.tabText, activeTab === '채팅' && styles.activeTabText]}>
+                채팅
+              </Text>
+              {activeTab === '채팅' && <View style={styles.underline} />}
             </TouchableOpacity>
           </View>
 

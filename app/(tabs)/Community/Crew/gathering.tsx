@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { SearchBar } from '@/components/SearchBar';
@@ -34,6 +34,7 @@ const dummyCrews = [
 ];
 
 export default function Gathering() {
+  const { id, name, members } = useLocalSearchParams();
   const router = useRouter();
   const [text, setText] = useState('');
   const [activeTab, setActiveTab] = useState('모임'); // Track active tab
@@ -143,9 +144,25 @@ export default function Gathering() {
             </Text>
             {activeTab === '게시판' && <View style={styles.underline} />}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tabButton}>
-            <Text style={styles.tabText}>채팅</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === '채팅' && styles.activeTab]}
+          onPress={() => {
+            setActiveTab('채팅');
+            router.push({
+              pathname: '/(tabs)/Community/Crew/crewChat',
+              params: {
+                id: id || dummyCrews[0].id,
+                name: name || dummyCrews[0].name,
+                members: members || dummyCrews[0].members.toString(),
+              },
+            });
+          }}
+        >
+          <Text style={[styles.tabText, activeTab === '채팅' && styles.activeTabText]}>
+            채팅
+          </Text>
+          {activeTab === '채팅' && <View style={styles.underline} />}
+        </TouchableOpacity>
         </View>
 
         {/* 전체 스크롤 가능한 내용 */}
