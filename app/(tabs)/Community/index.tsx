@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform, ActivityIndicator } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useEffect } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { usePosts, Post } from '@/hooks/community/usePosts';
+import { useAuth } from '@/hooks/authContext'; // Import useAuth
 
 // 공지사항 데이터 (정적 데이터로 유지)
 const notices = [
@@ -19,6 +20,7 @@ const notices = [
 export default function CommunityIndex() {
   const router = useRouter();
   const { posts, isLoading, error, loadInitialPosts, loadMore, pageInfo } = usePosts();
+  const { user } = useAuth(); // Get user from AuthContext
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -87,6 +89,22 @@ export default function CommunityIndex() {
     return null;
   };
 
+  // 게시글 작성 버튼 클릭 핸들러
+  const handleAddPost = () => {
+    if (!user || !user.userId) {
+      Alert.alert(
+        '로그인 필요',
+        '게시글을 작성하려면 로그인이 필요합니다. 로그인 화면으로 이동하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '로그인', onPress: () => router.push('/(tabs)/Login') }, // Adjust the login route as needed
+        ]
+      );
+    } else {
+      router.push('/(tabs)/Community/addPost');
+    }
+  };
+
   return (
     <PanGestureHandler
       onGestureEvent={onGestureEvent}
@@ -153,7 +171,7 @@ export default function CommunityIndex() {
           {/* 플로팅 버튼 (게시글 추가) */}
           <TouchableOpacity
             style={styles.circleButton}
-            onPress={() => router.push('/(tabs)/Community/addPost')}
+            onPress={handleAddPost} // Use the new handler
           >
             <Text style={styles.circlebtntext}>+</Text>
           </TouchableOpacity>

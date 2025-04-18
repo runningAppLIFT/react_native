@@ -12,13 +12,15 @@ import {
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { usePostCreate } from '@/hooks/community/usePostCreate'; // New hook
+import { usePostCreate } from '@/hooks/community/usePostCreate'; 
+import { useAuth } from '@/hooks/authContext';
 
 export default function WritePost() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false); // 모달 상태
+  const { user } = useAuth();
 
   const router = useRouter();
   const { createPost, isLoading, error } = usePostCreate();
@@ -40,7 +42,7 @@ export default function WritePost() {
 
     try {
       const postData = {
-        user_id: 1, // TODO: Replace with actual logged-in user ID from auth context
+        user_id: user.userId,
         comm_title: title,
         comm_detail: content,
       };
