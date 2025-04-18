@@ -46,7 +46,14 @@ export default function PostDetail() {
   const [postDeleteModalVisible, setPostDeleteModalVisible] = useState(false);
 
   const handleEdit = () => {
-    console.log('Editing post:', postData);
+    if (user && postData && postData.user_id === user.userId) {
+      router.push({
+        pathname: '/(tabs)/Community/addPost',
+        params: { postId: String(postId) },
+      });
+    } else {
+      Alert.alert('권한 없음', '이 게시글을 수정할 수 있는 권한이 없습니다.');
+    }
     setModalVisible(false);
   };
 

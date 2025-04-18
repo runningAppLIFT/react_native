@@ -70,7 +70,7 @@ export const usePostDetail = (postId: number) => {
   }, [postId]);
 
   // 게시글 수정
-  const updatePost = useCallback(async (data: { comm_title: string; comm_detail: string; user_id: number }) => {
+  const updatePost = useCallback(async (data: { comm_title: string; comm_detail: string; }) => {
     if (!postId) {
       setUpdateError('게시글 ID가 없습니다.');
       return;
@@ -84,7 +84,7 @@ export const usePostDetail = (postId: number) => {
       console.log('Updating post at URL:', url, 'with data:', data);
 
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });

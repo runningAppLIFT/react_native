@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   TextInput,
@@ -11,27 +11,46 @@ import {
   Alert,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { useRouter } from 'expo-router';
-import { usePostCreate } from '@/hooks/community/usePostCreate'; 
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { usePostCreate } from '@/hooks/community/usePostCreate';
+import { usePostDetail } from '@/hooks/community/usePostDetail';
 import { useAuth } from '@/hooks/authContext';
 
 export default function WritePost() {
+  const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const isEdit = !!postId;
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false); // 모달 상태
-  const { user } = useAuth();
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
+  const { user } = useAuth();
   const router = useRouter();
-  const { createPost, isLoading, error } = usePostCreate();
+
+  const { createPost, isLoading: isCreateLoading, error: createError } = usePostCreate();
+  const {
+    post,
+    fetchPost,
+    updatePost,
+    isUpdateLoading,
+    updateError,
+  } = usePostDetail(Number(postId));
+
+  useEffect(() => {
+    if (isEdit && post) {
+      setTitle(post.comm_title);
+      setContent(post.comm_detail);
+    }
+  }, [isEdit, post]);
 
   const handleCancelPost = () => {
-    setIsModalVisible(true); // 모달을 표시
+    setIsModalVisible(true);
   };
 
   const confirmCancel = () => {
-    setIsModalVisible(false); // 모달 닫기
-    router.back(); // 뒤로 이동
+    setIsModalVisible(false);
+    router.back();
   };
 
   const handlePostSubmit = async () => {
@@ -40,39 +59,39 @@ export default function WritePost() {
       return;
     }
 
+    const postData = {
+      comm_title: title,
+      comm_detail: content,
+    };
+
     try {
-      const postData = {
-        user_id: user.userId,
-        comm_title: title,
-        comm_detail: content,
-      };
+      if (isEdit) {
+        await updatePost(postData);
+        Alert.alert('성공', '게시글이 수정되었습니다.', [
+          { text: '확인', onPress: () => router.push('/(tabs)/Community') },
+        ]);
+      } else {
+        await createPost(postData);
+        Alert.alert('성공', '게시글이 작성되었습니다.', [
+          { text: '확인', onPress: () => router.push('/(tabs)/Community') },
+        ]);
+      }
 
-      await createPost(postData);
-
-      Alert.alert('성공', '게시글이 작성되었습니다.', [
-        {
-          text: '확인',
-          onPress: () => router.push('/(tabs)/Community'),
-        },
-      ]);
-
-      // Reset form
       setTitle('');
       setContent('');
       setImages([]);
     } catch (err) {
-      Alert.alert('오류', error || '게시글 작성에 실패했습니다.');
+      Alert.alert('오류', createError || updateError || '게시글 저장에 실패했습니다.');
     }
   };
 
   return (
     <ThemedView style={styles.container}>
-      {/* 상단 헤더 영역 */}
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={handleCancelPost} style={styles.backButton}>
           <Text style={styles.backButtonText}>◀</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>자유게시판</Text>
+        <Text style={styles.headerTitle}>{isEdit ? '게시글 수정' : '자유게시판'}</Text>
       </View>
 
       <TextInput
@@ -102,21 +121,22 @@ export default function WritePost() {
         ))}
       </View>
       <TouchableOpacity
-        style={[styles.submitButton, isLoading && styles.disabledButton]}
+        style={[styles.submitButton, (isCreateLoading || isUpdateLoading) && styles.disabledButton]}
         onPress={handlePostSubmit}
-        disabled={isLoading}
+        disabled={isCreateLoading || isUpdateLoading}
       >
-        {isLoading ? (
+        {(isCreateLoading || isUpdateLoading) ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>게시글 작성하기</Text>
+          <Text style={styles.submitButtonText}>
+            {isEdit ? '게시글 수정하기' : '게시글 작성하기'}
+          </Text>
         )}
       </TouchableOpacity>
 
-      {/* 작성 취소 모달 */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent
         visible={isModalVisible}
         onRequestClose={() => setIsModalVisible(false)}
       >
