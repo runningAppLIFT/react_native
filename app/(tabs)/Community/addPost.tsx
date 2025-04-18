@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View, Text, Image, Modal } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Text,
+  Image,
+  Modal,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
+import { usePostCreate } from '@/hooks/community/usePostCreate'; // New hook
 
 export default function WritePost() {
   const [title, setTitle] = useState('');
@@ -10,6 +21,7 @@ export default function WritePost() {
   const [isModalVisible, setIsModalVisible] = useState(false); // 모달 상태
 
   const router = useRouter();
+  const { createPost, isLoading, error } = usePostCreate();
 
   const handleCancelPost = () => {
     setIsModalVisible(true); // 모달을 표시
@@ -20,11 +32,35 @@ export default function WritePost() {
     router.back(); // 뒤로 이동
   };
 
-  const handlePostSubmit = () => {
-    console.log('Title:', title);
-    console.log('Content:', content);
-    console.log('Images:', images);
-    router.push('/(tabs)/Community'); // 저장 후 게시판으로 이동
+  const handlePostSubmit = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('오류', '제목과 내용을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      const postData = {
+        user_id: 1, // TODO: Replace with actual logged-in user ID from auth context
+        comm_title: title,
+        comm_detail: content,
+      };
+
+      await createPost(postData);
+
+      Alert.alert('성공', '게시글이 작성되었습니다.', [
+        {
+          text: '확인',
+          onPress: () => router.push('/(tabs)/Community'),
+        },
+      ]);
+
+      // Reset form
+      setTitle('');
+      setContent('');
+      setImages([]);
+    } catch (err) {
+      Alert.alert('오류', error || '게시글 작성에 실패했습니다.');
+    }
   };
 
   return (
@@ -56,15 +92,23 @@ export default function WritePost() {
             {images[index] ? (
               <Image source={{ uri: images[index] }} style={styles.image} />
             ) : (
-              <TouchableOpacity onPress={() => {/* 이미지 업로드 구현 */}}>
+              <TouchableOpacity onPress={() => {/* TODO: Implement image upload */}}>
                 <Text style={styles.imageAddText}>사진</Text>
               </TouchableOpacity>
             )}
           </View>
         ))}
       </View>
-      <TouchableOpacity style={styles.submitButton} onPress={handlePostSubmit}>
-        <Text style={styles.submitButtonText}>게시글 작성하기</Text>
+      <TouchableOpacity
+        style={[styles.submitButton, isLoading && styles.disabledButton]}
+        onPress={handlePostSubmit}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.submitButtonText}>게시글 작성하기</Text>
+        )}
       </TouchableOpacity>
 
       {/* 작성 취소 모달 */}
@@ -72,7 +116,7 @@ export default function WritePost() {
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)} // Android 전용 뒤로가기 버튼 설정
+        onRequestClose={() => setIsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -81,13 +125,13 @@ export default function WritePost() {
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setIsModalVisible(false)} // 모달 닫기
+                onPress={() => setIsModalVisible(false)}
               >
                 <Text style={styles.modalButtonText}>아니오</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmCancel} // 작성 취소 확인
+                onPress={confirmCancel}
               >
                 <Text style={styles.modalButtonText}>예</Text>
               </TouchableOpacity>
@@ -105,7 +149,6 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
   },
-  // 헤더 스타일
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -173,12 +216,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+  disabledButton: {
+    backgroundColor: '#cccccc',
+  },
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // 모달 스타일
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
