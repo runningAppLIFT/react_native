@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePostDetail } from '@/hooks/community/usePostDetail';
 import { usePostComments, Comment } from '@/hooks/community/useComments';
 import { useAuth } from '@/hooks/authContext';
+import { usePosts } from '@/hooks/community/usePosts';
 
 export default function PostDetail() {
   const router = useRouter();
@@ -25,7 +26,8 @@ export default function PostDetail() {
   const postId = typeof post === 'string' ? Number(JSON.parse(post).comm_number) : null;
 
   const { user } = useAuth();
-  const { post: postData, isLoading: isPostLoading, error: postError } = usePostDetail(postId);
+  const { post: postData, isLoading: isPostLoading, error: postError,deletePost } = usePostDetail(postId);
+  const { loadInitialPosts } = usePosts();
   const { 
     comments, 
     setComments, 
@@ -41,6 +43,7 @@ export default function PostDetail() {
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
+  const [postDeleteModalVisible, setPostDeleteModalVisible] = useState(false);
 
   const handleEdit = () => {
     console.log('Editing post:', postData);
@@ -49,7 +52,22 @@ export default function PostDetail() {
 
   const handleDelete = () => {
     console.log('Deleting post:', postData);
+    setPostDeleteModalVisible(true);
     setModalVisible(false);
+  };
+
+  const handleConfirmDeletePost = async () => {
+    try {
+      await deletePost(); // usePostDetail의 deletePost 호출
+      setPostDeleteModalVisible(false);
+      await loadInitialPosts();
+      Alert.alert('성공', '게시글이 삭제되었습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    } catch (err) {
+      console.error('게시글 삭제 에러:', err);
+      Alert.alert('오류', '게시글 삭제에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCommentSubmit = async () => {
@@ -325,6 +343,33 @@ export default function PostDetail() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.deleteButton]}
                 onPress={handleDeleteComment}
+              >
+                <Text style={[styles.modalText, { color: '#FF3B30' }]}>삭제</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Post Delete Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={postDeleteModalVisible}
+        onRequestClose={() => setPostDeleteModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>게시글을 삭제하시겠습니까?</Text>
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setPostDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleConfirmDeletePost}
               >
                 <Text style={[styles.modalText, { color: '#FF3B30' }]}>삭제</Text>
               </TouchableOpacity>

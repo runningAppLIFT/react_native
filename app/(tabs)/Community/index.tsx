@@ -1,5 +1,6 @@
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform, ActivityIndicator, Alert } from 'react-native';
-import { useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useEffect, useCallback } from 'react';
 import Swiper from 'react-native-swiper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -26,6 +27,13 @@ export default function CommunityIndex() {
   useEffect(() => {
     loadInitialPosts();
   }, [loadInitialPosts]);
+
+  // 화면 포커스 시 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialPosts(); // 화면이 포커스될 때마다 데이터 새로고침
+    }, [loadInitialPosts])
+  );
 
   // 제스처 이벤트 (오른쪽 스와이프 시 Crew 화면으로 이동)
   const onGestureEvent = ({ nativeEvent }: { nativeEvent: { translationX: number } }) => {
@@ -97,7 +105,7 @@ export default function CommunityIndex() {
         '게시글을 작성하려면 로그인이 필요합니다. 로그인 화면으로 이동하시겠습니까?',
         [
           { text: '취소', style: 'cancel' },
-          { text: '로그인', onPress: () => router.push('/(tabs)/Login') }, // Adjust the login route as needed
+          { text: '로그인', onPress: () => router.push('/(tabs)/login') }, // Adjust the login route as needed
         ]
       );
     } else {
