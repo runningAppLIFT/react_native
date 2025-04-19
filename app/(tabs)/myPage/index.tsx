@@ -67,7 +67,7 @@ export default function MyPageIndex() {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user || { ...user, nickname }); // 백엔드 응답 사용, 대체로 로컬 업데이트
+        setUser(data.user || { ...user, nickname });
         setNickname(data.user?.nickname || nickname);
         setIsEditing(false);
         Alert.alert('성공', '닉네임이 변경되었습니다.');
@@ -122,12 +122,16 @@ export default function MyPageIndex() {
             <Text style={styles.saveButtonText}>{isEditing ? '저장' : '수정'}</Text>
           </TouchableOpacity>
         </View>
-          
+
         <View style={styles.userInfoDateContainer}>
           <Text style={styles.userInfoDateLabel}>가입일자:</Text>
           <Text style={styles.userInfoDateText}>{joinDate || '정보 없음'}</Text>
         </View>
-          
+
+        <View style={styles.kakaoIdContainer}>
+          <Text style={styles.kakaoIdLabel}>카카오 ID:</Text>
+          <Text style={styles.kakaoIdText}>{user?.kakao_id || '정보 없음'}</Text>
+        </View>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={[styles.button, { backgroundColor: '#A3BFFA' }]}>
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
   userInfoLabel: {
     fontSize: 16,
     color: '#333',
-    width: 80, // 레이블의 고정 폭 설정
+    width: 80,
   },
   userInfo: {
     fontSize: 16,
@@ -211,14 +215,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '80%',
-    marginTop: 5,
+    marginVertical: 5,
   },
   userInfoDateLabel: {
     fontSize: 16,
     color: '#333',
-    width: 80, // 레이블의 고정 폭 (닉네임과 동일)
+    width: 80,
   },
   userInfoDateText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  kakaoIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '80%',
+    marginVertical: 5,
+  },
+  kakaoIdLabel: {
+    fontSize: 16,
+    color: '#333',
+    width: 80,
+  },
+  kakaoIdText: {
     fontSize: 16,
     color: '#333',
     flex: 1,
