@@ -8,19 +8,24 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker'; // 이미지 선택 라이브러리
+import { launchImageLibrary } from 'react-native-image-picker';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function CreateCrew() {
-  const [region, setRegion] = useState('');
-  const [leader, setLeader] = useState(''); // 현재 입력 중인 크루
-  const [crewMembers, setCrewMembers] = useState([]); // 추가된 크루 리스트
+  const [regionsList, setRegionsList] = useState([]);
+  const [leader, setLeader] = useState('');
+  const [crewMembers, setCrewMembers] = useState([]);
   const [crewName, setCrewName] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState(null);
-  const [crewKeywords, setCrewKeywords] = useState('');
-  const [keywordsList, setKeywordsList] = useState([]); // 입력된 키워드 리스트
+  const [keywordsList, setKeywordsList] = useState([]);
+  const [maxCrewMembers, setMaxCrewMembers] = useState(''); // Maximum crew members
+
+  // 키워드 선택지
+  const keywordOptions = ['운동', '음악', '여행', '게임', '요리'];
+  // 지역 선택지
+  const regionOptions = ['서울', '부산', '대구', '인천', '광주'];
 
   // 이미지 선택
   const handleImagePicker = async () => {
@@ -29,52 +34,58 @@ export default function CreateCrew() {
       quality: 0.8,
     });
     if (result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri); // 이미지 URI 설정
+      setImageUri(result.assets[0].uri);
     }
   };
 
-  // 크루 키워드 추가
-  const handleKeywordSubmit = () => {
-    if (crewKeywords.trim() && !keywordsList.includes(crewKeywords.trim())) {
-      setKeywordsList((prev) => [...prev, crewKeywords.trim()]); // 중복 방지 및 추가
-      setCrewKeywords(''); // 입력 필드 초기화
+  // 크루 키워드 토글
+  const toggleKeyword = (keyword) => {
+    if (keywordsList.includes(keyword)) {
+      setKeywordsList((prev) => prev.filter((item) => item !== keyword));
+    } else if (keywordsList.length < 5) {
+      setKeywordsList((prev) => [...prev, keyword]);
+    }
+  };
+
+  // 지역 토글
+  const toggleRegion = (region) => {
+    if (regionsList.includes(region)) {
+      setRegionsList((prev) => prev.filter((item) => item !== region));
+    } else if (regionsList.length < 3) {
+      setRegionsList((prev) => [...prev, region]);
     }
   };
 
   // 함께할 크루 추가
   const handleCrewMemberSubmit = () => {
     if (leader.trim() && !crewMembers.includes(leader.trim())) {
-      setCrewMembers((prev) => [...prev, leader.trim()]); // 중복 방지 및 추가
-      setLeader(''); // 입력 필드 초기화
+      setCrewMembers((prev) => [...prev, leader.trim()]);
+      setLeader('');
     }
-  };
-
-  // 크루 키워드 제거
-  const removeKeyword = (keyword) => {
-    setKeywordsList((prev) => prev.filter((item) => item !== keyword)); // 키워드 삭제
   };
 
   // 함께할 크루 제거
   const removeCrewMember = (member) => {
-    setCrewMembers((prev) => prev.filter((item) => item !== member)); // 크루 제거
+    setCrewMembers((prev) => prev.filter((item) => item !== member));
   };
 
   // 폼 제출
   const handleSubmit = () => {
     console.log({
-      region,
-      crewMembers, // 함께할 크루 리스트
+      regions: regionsList,
+      crewMembers,
       crewName,
       description,
       imageUri,
-      keywords: keywordsList, // 입력된 키워드 리스트
+      keywords: keywordsList,
+      maxCrewMembers: maxCrewMembers ? parseInt(maxCrewMembers) : null,
     });
     alert('크루 생성 완료!');
   };
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.contentContainer, {paddingBottom: 100}]}>
+      <ScrollView contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}>
         {/* 페이지 타이틀 */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headerText}>
@@ -107,8 +118,8 @@ export default function CreateCrew() {
 
         {/* 함께할 크루 */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>함께할 크루</Text>
-          <Text style={styles.smallText}>* 최대 2명까지 추가 가능합니다.</Text>
+          <Text style={styles.label}>크루 운영진</Text>
+          <Text style={styles.smallText}>*본인포함, 최소 3명 이상 운영자가 필요합니다.</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
@@ -121,7 +132,6 @@ export default function CreateCrew() {
               <Text style={styles.addButtonText}>추가</Text>
             </TouchableOpacity>
           </View>
-          {/* 함께할 크루 리스트 */}
           <View style={styles.keywordsContainer}>
             {crewMembers.map((member, index) => (
               <View style={styles.keywordItem} key={index}>
@@ -132,49 +142,73 @@ export default function CreateCrew() {
               </View>
             ))}
           </View>
+          <Text style={styles.label}>크루 최대 인원수</Text>
+          <TextInput
+            style={styles.input}
+            value={maxCrewMembers}
+            onChangeText={(text) => setMaxCrewMembers(text.replace(/[^0-9]/g, ''))}
+            placeholder="최대 인원수를 입력하세요 (숫자)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+          />
         </View>
 
         {/* 크루 활동 지역 */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>크루 활동 지역</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={region}
-              onChangeText={setRegion}
-              placeholder="지역을 입력하세요"
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>검색</Text>
-            </TouchableOpacity>
+          <Text style={styles.label}>크루 활동 지역 (최대 3개)</Text>
+          <View style={styles.buttonContainer}>
+            {regionOptions.map((region, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.optionButton,
+                  regionsList.includes(region) && styles.selectedButton,
+                  !regionsList.includes(region) &&
+                    regionsList.length >= 3 &&
+                    styles.disabledButton,
+                ]}
+                onPress={() => toggleRegion(region)}
+                disabled={!regionsList.includes(region) && regionsList.length >= 3}
+              >
+                <Text
+                  style={[
+                    styles.optionButtonText,
+                    regionsList.includes(region) && styles.selectedButtonText,
+                  ]}
+                >
+                  {region}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
         {/* 크루 키워드 */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>크루 키워드 설정</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={crewKeywords}
-              onChangeText={setCrewKeywords}
-              placeholder="키워드를 입력하세요"
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity style={styles.addButton} onPress={handleKeywordSubmit}>
-              <Text style={styles.addButtonText}>추가</Text>
-            </TouchableOpacity>
-          </View>
-          {/* 입력된 키워드 리스트 */}
-          <View style={styles.keywordsContainer}>
-            {keywordsList.map((keyword, index) => (
-              <View style={styles.keywordItem} key={index}>
-                <Text style={styles.keywordText}>{keyword}</Text>
-                <TouchableOpacity onPress={() => removeKeyword(keyword)}>
-                  <Text style={styles.removeText}>ⓧ</Text>
-                </TouchableOpacity>
-              </View>
+          <Text style={styles.label}>크루 키워드 설정 (최대 5개)</Text>
+          <View style={styles.buttonContainer}>
+            {keywordOptions.map((keyword, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.optionButton,
+                  keywordsList.includes(keyword) && styles.selectedButton,
+                  !keywordsList.includes(keyword) &&
+                    keywordsList.length >= 5 &&
+                    styles.disabledButton,
+                ]}
+                onPress={() => toggleKeyword(keyword)}
+                disabled={!keywordsList.includes(keyword) && keywordsList.length >= 5}
+              >
+                <Text
+                  style={[
+                    styles.optionButtonText,
+                    keywordsList.includes(keyword) && styles.selectedButtonText,
+                  ]}
+                >
+                  {keyword}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -271,17 +305,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
-  searchButton: {
-    marginLeft: 8,
+  buttonContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  optionButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#EEE',
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 8,
   },
-  searchButtonText: {
+  selectedButton: {
+    backgroundColor: '#007AFF',
+  },
+  disabledButton: {
+    backgroundColor: '#CCCCCC',
+  },
+  optionButtonText: {
     fontSize: 14,
+    color: '#333',
+  },
+  selectedButtonText: {
     color: '#fff',
   },
   addButton: {
@@ -290,6 +337,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#007AFF',
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButtonText: {
     fontSize: 14,
@@ -299,6 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 10,
+    marginBottom: 12,
   },
   keywordItem: {
     flexDirection: 'row',
