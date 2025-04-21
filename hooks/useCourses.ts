@@ -10,6 +10,7 @@ export const useCourses = (user: { userId: string } | null) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleToggleUserCourses = async (region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; } | null) => {
+    
     if (isUserCoursesVisible) {
       setIsUserCoursesVisible(false);
       setCourses([]);
@@ -131,12 +132,19 @@ export const useCourses = (user: { userId: string } | null) => {
 
   }
 
-  const coursesSave = async () => {
+  const coursesSave = async (course: Course) => {
+    setIsLoading(true); 
     try {
       const response = await fetch(
         `${API_URL}/courses/saves`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
-      );
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.userId,
+          courseId: course.course_id, // 저장할 코스의 ID도 포함
+          courseTitle: course.course_title, // 필요시 코스 제목, 설명 등을 추가
+        }),
+      }
+    );
   
       if (!response.ok) {
         const errorText = await response.text();

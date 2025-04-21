@@ -1,5 +1,5 @@
 import { useCourses } from '@/hooks/useCourses';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   Animated,
   PanResponder,
@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   FlatList,
 } from 'react-native';
 
@@ -24,15 +23,22 @@ interface Props {
   isVisible: boolean;
   onClose: () => void;
   courses: Course[];
+  onSelectCourse: (course_id: number) => void; 
+  loading: boolean;
 }
+
+
 
 export const NearbyBottomSheet: React.FC<Props> = ({
   isVisible,
   onClose,
   courses,
+  onSelectCourse,
 }) => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const {setCourses, coursesSave, isLoading } = useCourses({});
 
   const itemsPerPage = 4;
 
@@ -40,7 +46,17 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   
   const flatListRef = useRef<FlatList<any>>(null);
 
-  // const {coursesSave} = useCourses();
+  const selectedCourseFromList = useMemo(() => {
+    return courses.find(c => c.course_id === selectedCourse?.course_id);
+  }, [onSelectCourse, courses]);
+
+  const handleSaveCourse = (course: Course) => {
+    if (course) {
+      coursesSave(course); 
+    }
+  };
+
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 10,
@@ -74,6 +90,25 @@ export const NearbyBottomSheet: React.FC<Props> = ({
     }
   }, [isVisible]);
 
+  useEffect(() => {
+    if (selectedCourse) {
+      const course = selectedCourseFromList;
+      if (course) {
+        setSelectedCourse(course);
+
+        // 자동으로 해당 페이지로 FlatList 스크롤
+        const index = courses.findIndex(c =>c.course_id === selectedCourse.course_id);
+        const page = Math.floor(index / itemsPerPage);
+        flatListRef.current?.scrollToOffset({
+          offset: (width - 32) * page,
+          animated: true,
+        });
+        setCurrentPage(page + 1);
+      }
+    }
+  }, [selectedCourse]);
+
+
   const handleClose = () => {
     Animated.timing(translateY, {
       toValue: height,
@@ -82,6 +117,8 @@ export const NearbyBottomSheet: React.FC<Props> = ({
     }).start(onClose);
   };
 
+
+  
   const totalPages = Math.ceil(courses.length / itemsPerPage);
 
   
@@ -115,21 +152,19 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   
 
   return (
-    <TouchableWithoutFeedback onPress={handleClose}>
       <View style={styles.overlay}>
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY }] }]}
           {...panResponder.panHandlers}
         >
-          {selectedCourse ? (
+          {selectedCourseFromList  ? (
             <View>
               <TouchableOpacity onPress={() => setSelectedCourse(null)}>
                 <Text style={styles.backBtn}>←</Text>
               </TouchableOpacity>
-              <Text style={styles.title}>{`${selectedCourse.course_id}. ${selectedCourse.course_title}`}</Text>
-              <Text style={styles.detailText}>코스 설명 : {selectedCourse.course_content}</Text>
-              <TouchableOpacity>
-                {/* <Text style={styles.saveIcon}  onPress={()=>({}) }>💾 저장</Text> */}
+              <Text style={styles.title}>{`${selectedCourseFromList .course_id}. ${selectedCourseFromList .course_title}`}</Text>
+              <Text style={styles.detailText}>코스 설명 : {selectedCourseFromList .course_content}</Text>
+              <TouchableOpacity onPress={() => handleSaveCourse(selectedCourse)}>
                 <Text style={styles.saveIcon}>💾 저장</Text>
               </TouchableOpacity>
             </View>
@@ -155,7 +190,10 @@ export const NearbyBottomSheet: React.FC<Props> = ({
                       <TouchableOpacity
                         key={item.course_id}
                         style={styles.item}
-                        onPress={() => setSelectedCourse(item)}
+                        onPress={() => {
+                          setSelectedCourse(item);              // 내부 상세 보여주기
+                          onSelectCourse(item.course_id);       // 외부 지도에 알림
+                        }}
                       >
                         <Text style={styles.itemText}>
                           {(index * itemsPerPage) + idx + 1}. {item.course_title}
@@ -170,7 +208,7 @@ export const NearbyBottomSheet: React.FC<Props> = ({
           )}
         </Animated.View>
       </View>
-    </TouchableWithoutFeedback>
+
   );
 };
 

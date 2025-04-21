@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
 import { useAuth } from '@/hooks/authContext';
 import { useLocation } from '../../hooks/useLocation';
 import { usePoints } from '../../hooks/useMapPoints';
-import { Course, useCourses } from '../../hooks/useCourses';
+import { useCourses } from '../../hooks/useCourses';
 import { getDistance } from 'geolib'; 
 
 import Constants from 'expo-constants';
@@ -13,6 +13,7 @@ import { NearbyBottomSheet } from '@/components/NearbyBottomSheet';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl;
+
 
 // 타입 정의
 interface Coordinate {
@@ -45,9 +46,11 @@ const getTotalDistance = (points: Coordinate[]): number => {
 
 
 
+
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
   const { user } = useAuth();
+  const mapRef = useRef<MapView>(null);
   
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const [isMoreOptionsVisible, setIsMoreOptionsVisible] = useState(false);
@@ -67,6 +70,8 @@ export default function MapScreen() {
   // BottomSheet 관련 상태
   const [isVisible, setIsVisible] = useState(false);
 
+  // 코스
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
 
   useLocation(setRegion);
 
@@ -124,38 +129,54 @@ export default function MapScreen() {
     const totalDistance = points.length > 1 ? getTotalDistance(points) : 0;
     const distanceInKm = (totalDistance / 1000).toFixed(2); // km 단위, 소수점 2자리
 
+
+
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         showsUserLocation
         region={region || undefined}
         onRegionChangeComplete={(newRegion: Region) => setRegion(newRegion)}
         onPress={(e) => handleMapPress(e, activeFunction)}
       >
-        {points.map((point: Coordinate, index: number) => (
-          <Marker
-            key={index}
-            coordinate={point}
-            draggable
-            onDragEnd={(e) => {
-              const updatedPoints = [...points];
-              updatedPoints[index] = e.nativeEvent.coordinate;
-              setPoints(updatedPoints);
-            }}
-          />
-        ))}
-        {points.length > 1 && (
+
+      {points.length > 1 && (
           <Polyline coordinates={points} strokeColor="#FF0000" strokeWidth={2} />
         )}
-        {courses.map((course, index) => (
-          <Polyline
-            key={course.course_id}
-            coordinates={course.points}
-            strokeColor={`hsl(${index * 60}, 100%, 50%)`}
-            strokeWidth={2}
-          />
-        ))}
+
+         {courses.map((course) => (
+            (selectedCourseId === null || selectedCourseId === course.course_id) && (
+              <Marker
+                key={`marker-${course.course_id}`}
+                coordinate={course.points[0]}
+                pinColor="blue"
+                onPress={() => {
+                  console.log('Marker pressed:', course.course_id);
+                  setSelectedCourseId(course.course_id); // 선택된 코스 설정
+                  setIsVisible(true);                    // BottomSheet 열기
+                }}
+                
+              />
+            )
+          ))}
+
+
+         {/* 모든 코스의 시작점만 마커로 표시 */}
+         {selectedCourseId !== null && (
+            courses
+              .filter(c => c.course_id === selectedCourseId)
+              .map((course, index) => (
+                <Polyline
+                  key={`polyline-${course.course_id}`}
+                  coordinates={course.points}
+                  strokeColor={`hsl(${index * 60}, 100%, 50%)`}
+                  strokeWidth={2}
+                />
+      ))
+  )}
+     
       </MapView>
 
       <View style={styles.floatingButtons}>
@@ -268,6 +289,7 @@ export default function MapScreen() {
       </Modal>
 
 
+
       {/* BottomSheet 컴포넌트 */}
       {isVisible && (
         <NearbyBottomSheet isVisible={isVisible} onClose={() => {
@@ -275,9 +297,25 @@ export default function MapScreen() {
             handleToggleNearbyCourses(region); // 근처 코스 
             handleToggleUserCourses(region); // 코스 정보 
             setIsVisible(false) // BottomSheet 닫기
+            setSelectedCourseId(null); // BottomSheet 닫을 때 전체 다시 보여줌
           }}} 
-          courses={courses} // 코스데이터 전달 
-          />
+          courses={courses} // 코스데이터 전달
+          loading={isLoading} 
+          onSelectCourse={(course_id) => {
+            setSelectedCourseId(course_id);
+        
+            // 해당 코스 포인트를 찾아서 지도의 중심/줌 조정
+            const selectedCourse = courses.find(c => c.course_id === course_id);
+            if (selectedCourse && selectedCourse.points.length > 0) {
+              const coordinates = selectedCourse.points;
+              mapRef.current?.fitToCoordinates(coordinates, {
+                edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+                animated: true,
+              });
+            }
+          }}
+          
+        />
       )}
       {/*  BottomSheet 컴포넌트 끝 */}
 

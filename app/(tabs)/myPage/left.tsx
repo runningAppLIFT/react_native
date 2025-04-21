@@ -41,7 +41,7 @@ export default function MyPageLeft() {
 
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const { points, setPoints, handleMapPress } = usePoints();
-  const { courses, setCourses, isUserCoursesVisible, isNearbyCoursesVisible, isLoading, handleToggleUserCourses, handleToggleNearbyCourses } = useCourses(user);
+  const { courses, setCourses, isUserCoursesVisible, isNearbyCoursesVisible, isLoading, handleToggleUserCourses, handleToggleNearbyCourses , coursesSave, coursesDelete } = useCourses(user);
 
   const [isVisible, setIsVisible] = useState(true);
 

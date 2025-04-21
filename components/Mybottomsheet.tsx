@@ -1,3 +1,4 @@
+import { useCourses } from '@/hooks/useCourses';
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   Animated,
@@ -35,6 +36,9 @@ export const Mybottomsheet: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<'registered' | 'saved'>('registered');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
+
+  const {coursesSave, coursesDelete } = useCourses({});
+
 
   const translateY = useRef(new Animated.Value(height)).current;
   const flatListRef = useRef<FlatList<any>>(null);
@@ -154,13 +158,15 @@ export const Mybottomsheet: React.FC<Props> = ({
               setCurrentPage(page + 1);
             }}
             renderItem={({ item: courseGroup, index }) => (
-              <View style={{ width: width - 32 }}>
+              <View style={styles.itemsContainer}>
                 {courseGroup.map((item, idx) => (
                   <TouchableOpacity key={item.course_id} style={styles.item}>
                     <Text style={styles.itemText}>
                       {(index * itemsPerPage) + idx + 1}. {item.course_title}
                     </Text>
+                    <Text style={styles.itemText}>삭제</Text>
                   </TouchableOpacity>
+
                 ))}
               </View>
             )}
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    height: height * 0.3,
+    height: height * 0.4,
     backgroundColor: '#F5F8FC',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -234,5 +240,11 @@ const styles = StyleSheet.create({
   },
   pageText: {
     fontSize: 14,
+  },
+  itemsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    width: width - 32,
   },
 });
