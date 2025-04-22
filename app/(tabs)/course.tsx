@@ -44,9 +44,6 @@ const getTotalDistance = (points: Coordinate[]): number => {
   return distance;
 };
 
-
-
-
 export default function MapScreen() {
   const { region, setRegion } = useMapStore();
   const { user } = useAuth();
@@ -197,13 +194,13 @@ export default function MapScreen() {
                 handleAddPointsToggle();
                 setActiveFunction(isAddingPoints ? null : 'addPoints');
               }}>
-                <Text style={styles.optionButtonText}>{isAddingPoints ? '중지' : '등록'}</Text>
+                <Text style={styles.optionButtonText}>{isAddingPoints ? '중지' : '코스 등록'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.optionButton} onPress={handleRemoveLastPoint}>
                 <Text style={styles.optionButtonText}>삭제</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.optionButton} onPress={openSaveModal}>
-                <Text style={styles.optionButtonText}>저장</Text>
+                <Text style={styles.optionButtonText}>코스 저장</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -212,13 +209,15 @@ export default function MapScreen() {
         <View style={styles.buttonGroup}>
           <TouchableOpacity
             style={[styles.circleButton, styles.searchButton]}
-            onPress={() => {
+            onPress={async () => {
               if (region) {
-                handleToggleNearbyCourses(region);
-                handleToggleUserCourses(region); // 코스 정보
-              setIsVisible(true)
+                await Promise.all([
+                  handleToggleNearbyCourses(region),
+                  handleToggleUserCourses(region)
+                ]);
+                setIsVisible(true);
               }
-            }} // 근처 코스 불러오기 및 BottomSheet 열기
+            }}
           >
             <MaterialIcons name="search" size={24} color="black" style={styles.iconText} />
           </TouchableOpacity>
@@ -254,13 +253,13 @@ export default function MapScreen() {
             <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
                 onPress={handleSavePoints}>
-                <Text style={styles.modalButtonText}>저장</Text>
+                <Text style={styles.modalButtonText}>코스 저장</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => setIsSaveModalVisible(false)}
               >
-                <Text style={styles.modalButtonText}>취소</Text>
+                <Text style={styles.modalButtonText2}>취소하기</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -276,13 +275,13 @@ export default function MapScreen() {
     >
       <View style={styles.modalBackground}>
         <View style={styles.completeModalView}>
-          <Text style={styles.modalTitle}>저장완료</Text>
-          <Text style={styles.modalMessage}>코스가 저장되었습니다!</Text>
+          <Text style={styles.modalTitle}>저장완료!!</Text>
+          <Text style={styles.modalMessage}>코스가 저장되었습니다.</Text>
 
           <TouchableOpacity
             onPress={() => setIsCompletedModalVisible(false)}
           >
-            <Text style={styles.modalButtonText}>확인</Text>
+            <Text style={styles.modalButtonText2}>확인</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -291,7 +290,7 @@ export default function MapScreen() {
 
 
       {/* BottomSheet 컴포넌트 */}
-      {isVisible && (
+      {isVisible && Array.isArray(courses) && courses.length > 0 && (
         <NearbyBottomSheet isVisible={isVisible} onClose={() => {
           if (region!) { 
             handleToggleNearbyCourses(region); // 근처 코스 
@@ -379,7 +378,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     top: 0,
-    right: 70,
+    right: 120,
   },
   optionButton: {
     backgroundColor: '#fff',
@@ -432,7 +431,7 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 20,
     alignItems: 'center',
     marginHorizontal: 5,
   },
@@ -443,8 +442,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#2196F3',
   },
   modalButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  modalButtonText2: {
     color: 'black',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   distanceText: {
@@ -453,10 +457,10 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   completeModalView: {
-    width: '70%',
-    backgroundColor: 'white',
+    width: '60%',
+    backgroundColor: '#A1CEFF',
     borderRadius: 20,
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
     elevation: 10,
   },

@@ -5,10 +5,12 @@ export const usePoints = () => {
   const [isAddingPoints, setIsAddingPoints] = useState(false);
 
   const handleAddPointsToggle = () => {
-    setIsAddingPoints((prev) => !prev);
-    if (!isAddingPoints) {
-      setPoints([]);
-    }
+    setIsAddingPoints((prev) => {
+      if (!prev) {
+        setPoints([]); // 켜지는 경우에만 초기화
+      }
+      return !prev;
+    });
   };
 
   const handleRemoveLastPoint = () => {

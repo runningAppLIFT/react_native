@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -38,7 +39,9 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const {setCourses, coursesSave, isLoading } = useCourses({});
+  const {setCourses, coursesSave, isLoading } = useCourses({
+    userId: ''
+  });
 
   const itemsPerPage = 4;
 
@@ -51,8 +54,8 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   }, [onSelectCourse, courses]);
 
   const handleSaveCourse = (course: Course) => {
-    if (course) {
-      coursesSave(course); 
+    if (courses) {
+      coursesSave(courses); 
     }
   };
 
@@ -91,22 +94,24 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   }, [isVisible]);
 
   useEffect(() => {
-    if (selectedCourse) {
-      const course = selectedCourseFromList;
-      if (course) {
-        setSelectedCourse(course);
-
-        // 자동으로 해당 페이지로 FlatList 스크롤
-        const index = courses.findIndex(c =>c.course_id === selectedCourse.course_id);
-        const page = Math.floor(index / itemsPerPage);
-        flatListRef.current?.scrollToOffset({
-          offset: (width - 32) * page,
-          animated: true,
-        });
-        setCurrentPage(page + 1);
-      }
-    }
-  }, [selectedCourse]);
+    if (!selectedCourse || !courses.length) return;
+  
+    const index = courses.findIndex(c => c.course_id === selectedCourse.course_id);
+  
+    // 못 찾았으면 실행하지 않음
+    if (index === -1) return;
+  
+    const page = Math.floor(index / itemsPerPage);
+  
+    // 페이지 스크롤
+    flatListRef.current?.scrollToOffset({
+      offset: (width - 32) * page,
+      animated: true,
+    });
+  
+    setCurrentPage(page + 1);
+  }, [selectedCourse, courses]);
+  
 
 
   const handleClose = () => {
@@ -122,9 +127,13 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   const totalPages = Math.ceil(courses.length / itemsPerPage);
 
   
-  const pages = Array.from({ length: totalPages }, (_, pageIndex) =>
-    courses.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage)
-  );
+  const pages = useMemo(() => {
+    const totalPages = Math.ceil(courses.length / itemsPerPage);
+    return Array.from({ length: totalPages }, (_, pageIndex) =>
+      courses.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage)
+    );
+  }, [courses]);
+  
 
   const renderPagination = () => (
     <View style={styles.pagination}>
@@ -157,27 +166,38 @@ export const NearbyBottomSheet: React.FC<Props> = ({
           style={[styles.sheet, { transform: [{ translateY }] }]}
           {...panResponder.panHandlers}
         >
-          {selectedCourseFromList  ? (
+           {isLoading ? (
+            <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={styles.loadingText}>코스를 불러오는 중...</Text>
+        </View>
+        ) :selectedCourseFromList  ? (
             <View>
               <TouchableOpacity onPress={() => setSelectedCourse(null)}>
                 <Text style={styles.backBtn}>←</Text>
               </TouchableOpacity>
-              <Text style={styles.title}>{`${selectedCourseFromList .course_id}. ${selectedCourseFromList .course_title}`}</Text>
-              <Text style={styles.detailText}>코스 설명 : {selectedCourseFromList .course_content}</Text>
-              <TouchableOpacity onPress={() => handleSaveCourse(selectedCourse)}>
+              <Text style={styles.title}>{`${selectedCourseFromList.course_id}. ${selectedCourseFromList .course_title}`}</Text>
+              <Text style={styles.detailText}>코스 설명 : {selectedCourseFromList.course_content}</Text>
+              <TouchableOpacity onPress={() => handleSaveCourse(selectedCourseFromList)}>
                 <Text style={styles.saveIcon}>💾 저장</Text>
               </TouchableOpacity>
-            </View>
+            </View> 
           ) : (
             <View>
               <Text style={styles.title}>내 근처 코스</Text>
               <FlatList
                 data={pages}
                 ref={flatListRef}
-                keyExtractor={(_, index) => index.toString()}
+                keyExtractor={(item) => item.course_id}
+                initialScrollIndex={(currentPage - 1) * itemsPerPage}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
+                getItemLayout={(_, index) => ({
+                  length: width - 32,
+                  offset: (width - 32) * index,
+                  index,
+                })}
                 onMomentumScrollEnd={(e) => {
                   const page = Math.round(
                     e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
@@ -285,5 +305,15 @@ const styles = StyleSheet.create({
   },
   pageText: {
     fontSize: 14,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#333',
   },
 });

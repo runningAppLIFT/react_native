@@ -40,22 +40,25 @@ export const useCourses = (user: { userId: string } | null) => {
       }
 
       const result = await response.json();
-      if (result.courses.length > 0) {
-        setCourses(
-          result.courses.map((course: any) => ({
-            course_id: course.course_id,
-            course_title: course.course_title,
-            course_content: course.course_content,
-            points: course.course_line.coordinates.map(([longitude, latitude]: [number, number]) => ({
-              latitude,
-              longitude,
-            })),
-          }))
-        );
+      setTimeout(() => {
+        if (result.courses.length > 0) {
+          setCourses(
+            result.courses.map((course: any) => ({
+              course_id: course.course_id,
+              course_title: course.course_title,
+              course_content: course.course_content,
+              points: course.course_line.coordinates.map(([longitude, latitude]: [number, number]) => ({
+                latitude,
+                longitude,
+              })),
+            }))
+          );
         setIsUserCoursesVisible(true);
       } else {
         alert('등록된 코스가 없습니다.');
       }
+      setIsLoading(false);
+    }, 1000); // 2초 후에 로딩을 종료
     } catch (error: any) { // error 타입 명시
       alert(`코스 불러오기에 실패했습니다: ${error.message}`);
     } finally {
@@ -123,14 +126,26 @@ export const useCourses = (user: { userId: string } | null) => {
         `${API_URL}/courses/${course_id}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } }
       );
-   }catch (error: any) {
-      alert(`코스 불러오기에 실패했습니다: ${error.message}`);
+      const result = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to load course content: ${response.status} - ${errorText}`);
+      }
+
+      if (result.course) {
+        return result.course;
+      } else {
+        alert('코스 내용을 불러오지 못했습니다.');
+      }
+    } catch (error: any) {
+
+      alert(`코스 내용을 불러오기에 실패했습니다: ${error.message}`);
     }
     finally {
       setIsLoading(false);
     }
+  };
 
-  }
 
   const coursesSave = async (course: Course) => {
     setIsLoading(true); 
@@ -169,7 +184,7 @@ export const useCourses = (user: { userId: string } | null) => {
 
     try {
       const response = await fetch(
-        `${API_URL}/courses/saves/${user.userId}`,
+        `${API_URL}/courses/saves/${user.userId}/${course_id}`,
         { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
       );
   
