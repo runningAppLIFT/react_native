@@ -29,14 +29,15 @@ export default function LoginScreen() {
       {/* 상단 영역: 고양이 이미지와 제목 */}
       <View style={styles.header}>
       <Image
-        source={require('../../assets/images/welcomecat.png')} // 로컬 경로 추가
+        source={require('../../assets/images/welcomecat.jpg')} // 로컬 경로 추가
         style={styles.catImage}
       />
-        <Text style={styles.title}>움직여라 닝겐</Text>
+        <Text style={styles.title}>LIFT</Text>
         <Text style={styles.content}>
-          나가기가 가장 힘든 당신을 위해
+        (Learning, Inspired, Friend, Together){"\n"}{"\n"}
+        "서로 배우며 영감을 나누고,
           {"\n"}
-          또 로그인도 귀찮아 할 당신을 위해
+          친구가 되어 함께 성장하자"
           {"\n"}
         </Text>
       </View>
@@ -56,6 +57,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     paddingHorizontal: 20,
+    justifyContent: 'center', // 중앙 정렬
+    // marginBottom: 80,
+    paddingBottom: 80,
   },
   header: {
     alignItems: 'center', // 고양이 이미지와 텍스트 중앙 정렬
