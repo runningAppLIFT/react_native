@@ -12,6 +12,7 @@ export interface Post {
   comm_title: string;
   comm_detail: string;
   created_at: string;
+  commentCount: number;
 }
 
 // 페이지 정보 인터페이스
@@ -70,6 +71,7 @@ export const usePosts = () => {
           comm_title: post.comm_title,
           comm_detail: post.comm_detail,
           created_at: post.created_at,
+          commentCount: post.commentCount,
         }));
 
         console.log('New posts:', newPosts); // 디버깅: 매핑된 게시글 확인

@@ -23,19 +23,29 @@ import { usePosts } from '@/hooks/community/usePosts';
 export default function PostDetail() {
   const router = useRouter();
   const { post } = useLocalSearchParams();
-  const postId = typeof post === 'string' ? Number(JSON.parse(post).comm_number) : null;
+  let postId: number | null = null;
+
+  // postId 파싱 및 유효성 검사
+  try {
+    if (typeof post === 'string') {
+      const parsed = JSON.parse(post);
+      postId = Number(parsed.comm_number) || null;
+    }
+  } catch (err) {
+    console.error('post 파싱 에러:', err);
+  }
 
   const { user } = useAuth();
-  const { post: postData, isLoading: isPostLoading, error: postError,deletePost } = usePostDetail(postId);
+  const { post: postData, isLoading: isPostLoading, error: postError, deletePost } = usePostDetail(postId);
   const { loadInitialPosts } = usePosts();
-  const { 
-    comments, 
-    setComments, 
-    isLoading: isCommentsLoading, 
-    error: commentsError, 
-    refetch, 
+  const {
+    comments,
+    setComments,
+    isLoading: isCommentsLoading,
+    error: commentsError,
+    refetch,
     createComment,
-    deleteComment 
+    deleteComment,
   } = usePostComments(postId);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -44,6 +54,11 @@ export default function PostDetail() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [postDeleteModalVisible, setPostDeleteModalVisible] = useState(false);
+
+  // 디버깅 로그
+  console.log('Post ID:', postId);
+  console.log('Post Data:', postData);
+  console.log('Comments:', comments);
 
   const handleEdit = () => {
     if (user && postData && postData.user_id === user.userId) {
@@ -65,7 +80,7 @@ export default function PostDetail() {
 
   const handleConfirmDeletePost = async () => {
     try {
-      await deletePost(); // usePostDetail의 deletePost 호출
+      await deletePost();
       setPostDeleteModalVisible(false);
       await loadInitialPosts();
       Alert.alert('성공', '게시글이 삭제되었습니다.', [
@@ -79,7 +94,7 @@ export default function PostDetail() {
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
-  
+
     if (!user) {
       Alert.alert('로그인 필요', '댓글을 작성하려면 로그인이 필요합니다.', [
         { text: '취소', style: 'cancel' },
@@ -87,7 +102,7 @@ export default function PostDetail() {
       ]);
       return;
     }
-  
+
     try {
       const commentData = {
         user_id: user.userId,
@@ -95,34 +110,53 @@ export default function PostDetail() {
         parent_comment_id: replyingTo?.coment_id || null,
       };
       console.log('댓글 전송 데이터:', commentData);
-  
+
       await createComment(commentData);
-  
+
       setCommentText('');
       setReplyingTo(null);
       refetch();
       Alert.alert('성공', '댓글이 작성되었습니다.');
     } catch (err) {
+      console.error('댓글 작성 에러:', err);
       Alert.alert('오류', commentsError || '댓글 작성에 실패했습니다.');
     }
   };
 
   const handleDeleteComment = async () => {
-    if (!commentToDelete) return;
+    if (!commentToDelete) {
+      setDeleteModalVisible(false);
+      return;
+    }
 
     try {
       await deleteComment(commentToDelete);
       setDeleteModalVisible(false);
       setCommentToDelete(null);
-      await refetch(); // 삭제 후 즉시 댓글 목록 새로고침
+      await refetch();
       Alert.alert('성공', '댓글이 삭제되었습니다.');
     } catch (err) {
-      console.error('댓글 삭제 에러:', err); // 디버깅용 로그
+      console.error('댓글 삭제 에러:', err);
       Alert.alert('오류', '댓글 삭제에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
-  if (isPostLoading || isCommentsLoading) {
+  // postId 유효성 검사
+  if (!postId) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.statusText}>유효하지 않은 게시글 ID입니다.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryButtonText}>뒤로 가기</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // 로딩 상태
+  if (isPostLoading || isCommentsLoading || !postData) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -133,7 +167,8 @@ export default function PostDetail() {
     );
   }
 
-  if (postError || !postData || commentsError) {
+  // 에러 상태
+  if (postError || commentsError) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -152,7 +187,7 @@ export default function PostDetail() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
@@ -169,31 +204,37 @@ export default function PostDetail() {
         {/* Content */}
         <ScrollView style={styles.content}>
           <View style={styles.postHeader}>
-            <Text style={styles.author}>사용자 {postData.user_id}</Text>
+            <Text style={styles.author}>
+              {postData.nickname ? postData.nickname : `사용자 ${postData.user_id}`}
+            </Text>
             <Text style={styles.date}>
-              {new Date(postData.created_at).toLocaleString('ko-KR', {
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {postData.created_at
+                ? new Date(postData.created_at).toLocaleString('ko-KR', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : '날짜 없음'}
             </Text>
           </View>
-          <Text style={styles.postTitle}>{postData.comm_title}</Text>
+          <Text style={styles.postTitle}>{postData.comm_title || '제목 없음'}</Text>
           <View style={styles.postBody}>
-            <Text style={styles.postContent}>{postData.comm_detail}</Text>
+            <Text style={styles.postContent}>{postData.comm_detail || '내용 없음'}</Text>
           </View>
 
           {/* 댓글 영역 */}
           <View style={styles.commentsSection}>
             <View style={styles.commentsHeader}>
               <Text style={styles.commentsTitle}>댓글</Text>
-              <Text style={styles.likes}>💬 {comments.length}</Text>
+              <Text style={styles.likes}>💬 {(comments || []).length}</Text>
             </View>
             {(comments || []).map((comment) => (
               <View key={comment.coment_id} style={styles.commentBox}>
                 <View style={styles.commentHeader}>
-                  <Text style={styles.commentAuthor}>{comment.author}</Text>
+                  <Text style={styles.commentAuthor}>
+                    {comment.author || comment.nickname || `사용자 ${comment.user_id}`}
+                  </Text>
                   {user && user.userId === comment.user_id && (
                     <TouchableOpacity
                       onPress={() => {
@@ -206,15 +247,17 @@ export default function PostDetail() {
                   )}
                 </View>
                 <Text style={styles.commentDate}>
-                  {new Date(comment.created_at).toLocaleString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })}
+                  {comment.created_at
+                    ? new Date(comment.created_at).toLocaleString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })
+                    : '날짜 없음'}
                 </Text>
-                <Text style={styles.commentContent}>{comment.content}</Text>
+                <Text style={styles.commentContent}>{comment.content || '내용 없음'}</Text>
                 <TouchableOpacity
                   style={styles.replyButton}
                   onPress={() => {
@@ -225,10 +268,12 @@ export default function PostDetail() {
                   <Text style={styles.replyButtonText}>답글</Text>
                 </TouchableOpacity>
 
-                {comment.replies && comment.replies.map((reply) => (
+                {(comment.replies || []).map((reply) => (
                   <View key={reply.coment_id} style={styles.replyBox}>
                     <View style={styles.commentHeader}>
-                      <Text style={styles.commentAuthor}>{reply.author}</Text>
+                      <Text style={styles.commentAuthor}>
+                        {reply.author || reply.nickname || `사용자 ${reply.user_id}`}
+                      </Text>
                       {user && user.userId === reply.user_id && (
                         <TouchableOpacity
                           onPress={() => {
@@ -241,23 +286,23 @@ export default function PostDetail() {
                       )}
                     </View>
                     <Text style={styles.commentDate}>
-                      {new Date(reply.created_at).toLocaleString('ko-KR', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}
+                      {reply.created_at
+                        ? new Date(reply.created_at).toLocaleString('ko-KR', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })
+                        : '날짜 없음'}
                     </Text>
-                    <Text style={styles.commentContent}>{reply.content}</Text>
+                    <Text style={styles.commentContent}>{reply.content || '내용 없음'}</Text>
                   </View>
                 ))}
               </View>
             ))}
-            {!comments.length && (
-              <Text style={{ color: '#777', marginTop: 8 }}>
-                댓글이 없습니다.
-              </Text>
+            {!comments?.length && (
+              <Text style={{ color: '#777', marginTop: 8 }}>댓글이 없습니다.</Text>
             )}
           </View>
         </ScrollView>
@@ -267,7 +312,7 @@ export default function PostDetail() {
           {replyingTo && (
             <View style={styles.replyingTo}>
               <Text style={styles.replyingToText}>
-                {replyingTo.author}에게 답글
+                {(replyingTo.author || replyingTo.nickname || `사용자 ${replyingTo.user_id}`)}에게 답글
               </Text>
               <TouchableOpacity onPress={() => setReplyingTo(null)}>
                 <Ionicons name="close" size={20} color="#999" />
@@ -277,9 +322,7 @@ export default function PostDetail() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.commentInput}
-              placeholder={
-                replyingTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'
-              }
+              placeholder={replyingTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
               value={commentText}
               onChangeText={setCommentText}
               multiline
@@ -357,6 +400,7 @@ export default function PostDetail() {
           </View>
         </View>
       </Modal>
+
       {/* Post Delete Confirmation Modal */}
       <Modal
         animationType="fade"
@@ -591,5 +635,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  statusText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#0066FF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

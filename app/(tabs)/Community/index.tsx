@@ -62,7 +62,7 @@ export default function CommunityIndex() {
         </View>
         <View style={styles.likeContainer}>
           <IconSymbol name="message" color="#000" />
-          <Text>0</Text> {/* 댓글 수는 API에 없으므로 0으로 표시 */}
+          <Text>{item.commentCount}</Text> 
         </View>
       </View>
     </TouchableOpacity>

@@ -14,6 +14,7 @@ export interface PostDetail {
   is_notice?: boolean;
   modify_at?: string | null;
   status?: string;
+  nickname?: string; // 추가
 }
 
 // API 응답 인터페이스
