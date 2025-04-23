@@ -11,6 +11,7 @@ interface CommentApiResponse {
   post_id: number;
   coment_detail: string; // API 응답에서는 이름이 coment_detail
   coment_parent: number | null; // API 응답에서는 이름이 coment_parent
+  nickname: string; // 사용자 닉네임
   created_at: string;
 }
 
@@ -65,7 +66,7 @@ export const usePostComments = (postId: number) => {
       const formattedComment: Comment = {
         coment_id: comment.coment_id,
         user_id: comment.user_id,
-        author: `사용자 ${comment.user_id}`, // user_id를 화면에 표시할 author로 변환
+        author: `${comment.nickname}`, // nickname를 화면에 표시할 author로 변환
         content: comment.coment_detail, // coment_detail을 content로 변환
         created_at: comment.created_at,
         replies: []
@@ -104,7 +105,7 @@ export const usePostComments = (postId: number) => {
     return {
       coment_id: apiComment.coment_id,
       user_id: apiComment.user_id,
-      author: `사용자 ${apiComment.user_id}`,
+      author: `사용자 ${apiComment.nickname}`,
       content: apiComment.coment_detail,
       created_at: apiComment.created_at,
       replies: []

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,14 +26,18 @@ export default function PostDetail() {
   const { post } = useLocalSearchParams();
   let postId: number | null = null;
 
-  // postId 파싱 및 유효성 검사
+  // postId 파싱 및 유효성 검사 (수정: 더 엄격한 검사)
   try {
     if (typeof post === 'string') {
       const parsed = JSON.parse(post);
       postId = Number(parsed.comm_number) || null;
+      if (!postId || isNaN(postId)) {
+        throw new Error('Invalid postId');
+      }
     }
   } catch (err) {
     console.error('post 파싱 에러:', err);
+    postId = null;
   }
 
   const { user } = useAuth();
@@ -40,7 +45,6 @@ export default function PostDetail() {
   const { loadInitialPosts } = usePosts();
   const {
     comments,
-    setComments,
     isLoading: isCommentsLoading,
     error: commentsError,
     refetch,
@@ -54,12 +58,23 @@ export default function PostDetail() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [postDeleteModalVisible, setPostDeleteModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // 디버깅 로그
-  console.log('Post ID:', postId);
-  console.log('Post Data:', postData);
-  console.log('Comments:', comments);
+  // 댓글 새로고침 핸들러
+  const onRefresh = useCallback(async () => {
+    if (!postId) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+    } catch (err) {
+      console.error('댓글 새로고침 에러:', err);
+      Alert.alert('오류', '댓글을 새로고침하지 못했습니다.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [postId, refetch]);
 
+  // 게시글 수정
   const handleEdit = () => {
     if (user && postData && postData.user_id === user.userId) {
       router.push({
@@ -72,30 +87,31 @@ export default function PostDetail() {
     setModalVisible(false);
   };
 
+  // 게시글 삭제
   const handleDelete = () => {
-    console.log('Deleting post:', postData);
     setPostDeleteModalVisible(true);
     setModalVisible(false);
   };
 
+  // 게시글 삭제 확인 (수정: 삭제 후 즉시 뒤로 이동)
   const handleConfirmDeletePost = async () => {
     try {
       await deletePost();
       setPostDeleteModalVisible(false);
       await loadInitialPosts();
-      Alert.alert('성공', '게시글이 삭제되었습니다.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
+      router.back(); // 즉시 뒤로 이동
+      Alert.alert('성공', '게시글이 삭제되었습니다.');
     } catch (err) {
       console.error('게시글 삭제 에러:', err);
       Alert.alert('오류', '게시글 삭제에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
+  // 댓글 작성
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
 
-    if (!user) {
+    if (!user || !user.userId) {
       Alert.alert('로그인 필요', '댓글을 작성하려면 로그인이 필요합니다.', [
         { text: '취소', style: 'cancel' },
         { text: '로그인', onPress: () => router.push('/(tabs)/login') },
@@ -109,13 +125,10 @@ export default function PostDetail() {
         content: commentText,
         parent_comment_id: replyingTo?.coment_id || null,
       };
-      console.log('댓글 전송 데이터:', commentData);
-
       await createComment(commentData);
-
       setCommentText('');
       setReplyingTo(null);
-      refetch();
+      await refetch();
       Alert.alert('성공', '댓글이 작성되었습니다.');
     } catch (err) {
       console.error('댓글 작성 에러:', err);
@@ -123,6 +136,7 @@ export default function PostDetail() {
     }
   };
 
+  // 댓글 삭제
   const handleDeleteComment = async () => {
     if (!commentToDelete) {
       setDeleteModalVisible(false);
@@ -141,7 +155,7 @@ export default function PostDetail() {
     }
   };
 
-  // postId 유효성 검사
+  // postId가 유효하지 않은 경우
   if (!postId) {
     return (
       <SafeAreaView style={styles.container}>
@@ -156,7 +170,7 @@ export default function PostDetail() {
   }
 
   // 로딩 상태
-  if (isPostLoading || isCommentsLoading || !postData) {
+  if (isPostLoading || isCommentsLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -167,15 +181,21 @@ export default function PostDetail() {
     );
   }
 
-  // 에러 상태
-  if (postError || commentsError) {
+  // 에러 상태 또는 postData가 null인 경우 (수정: !postData 추가)
+  if (postError || !postData || commentsError) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.statusText}>
-            {postError || commentsError || '데이터를 불러올 수 없습니다.'}
+            {postError || commentsError || '게시글 데이터를 불러올 수 없습니다.'}
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: '#999', marginTop: 10 }]}
+            onPress={() => router.back()}
+          >
             <Text style={styles.retryButtonText}>뒤로 가기</Text>
           </TouchableOpacity>
         </View>
@@ -202,10 +222,14 @@ export default function PostDetail() {
         </View>
 
         {/* Content */}
-        <ScrollView style={styles.content}>
+        <ScrollView
+          style={styles.content}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
           <View style={styles.postHeader}>
             <Text style={styles.author}>
-              {postData.nickname ? postData.nickname : `사용자 ${postData.user_id}`}
+              {/* 수정: 안전한 속성 접근 */}
+              {postData?.nickname || ` ${postData?.user_id || '알 수 없음'}`}
             </Text>
             <Text style={styles.date}>
               {postData.created_at
@@ -233,7 +257,7 @@ export default function PostDetail() {
               <View key={comment.coment_id} style={styles.commentBox}>
                 <View style={styles.commentHeader}>
                   <Text style={styles.commentAuthor}>
-                    {comment.author || comment.nickname || `사용자 ${comment.user_id}`}
+                    {comment.author || `${comment.user_id}`}
                   </Text>
                   {user && user.userId === comment.user_id && (
                     <TouchableOpacity
@@ -260,10 +284,7 @@ export default function PostDetail() {
                 <Text style={styles.commentContent}>{comment.content || '내용 없음'}</Text>
                 <TouchableOpacity
                   style={styles.replyButton}
-                  onPress={() => {
-                    console.log('답글 대상 댓글:', comment);
-                    setReplyingTo(comment);
-                  }}
+                  onPress={() => setReplyingTo(comment)}
                 >
                   <Text style={styles.replyButtonText}>답글</Text>
                 </TouchableOpacity>
@@ -272,7 +293,7 @@ export default function PostDetail() {
                   <View key={reply.coment_id} style={styles.replyBox}>
                     <View style={styles.commentHeader}>
                       <Text style={styles.commentAuthor}>
-                        {reply.author || reply.nickname || `사용자 ${reply.user_id}`}
+                        {reply.author || `${reply.user_id}`}
                       </Text>
                       {user && user.userId === reply.user_id && (
                         <TouchableOpacity
@@ -302,7 +323,10 @@ export default function PostDetail() {
               </View>
             ))}
             {!comments?.length && (
-              <Text style={{ color: '#777', marginTop: 8 }}>댓글이 없습니다.</Text>
+              <View style={styles.noCommentsContainer}>
+                <Text style={styles.noCommentsText}>아직 댓글이 없습니다.</Text>
+                <Text style={styles.noCommentsSubText}>첫 번째 댓글을 작성해보세요!</Text>
+              </View>
             )}
           </View>
         </ScrollView>
@@ -312,7 +336,7 @@ export default function PostDetail() {
           {replyingTo && (
             <View style={styles.replyingTo}>
               <Text style={styles.replyingToText}>
-                {(replyingTo.author || replyingTo.nickname || `사용자 ${replyingTo.user_id}`)}에게 답글
+                {(replyingTo.author || `${replyingTo.user_id}`)}에게 답글
               </Text>
               <TouchableOpacity onPress={() => setReplyingTo(null)}>
                 <Ionicons name="close" size={20} color="#999" />
@@ -663,5 +687,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  noCommentsContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    color: '#777',
+    marginBottom: 8,
+  },
+  noCommentsSubText: {
+    fontSize: 14,
+    color: '#999',
   },
 });
