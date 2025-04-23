@@ -55,7 +55,7 @@ const renderItem = ({ item }: { item: Post }) => {
       </ThemedText>
       <View style={styles.contentinner}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ marginRight: 10 }}>작성자 {item.user_id}</Text>
+          <Text style={{ marginRight: 10 }}>작성자 {item.nickname}</Text>
           <Text>{new Date(item.created_at).toLocaleDateString()}</Text>
         </View>
         <View style={styles.likeContainer}>

@@ -13,6 +13,7 @@ export interface Post {
   comm_detail: string;
   created_at: string;
   commentCount: number;
+  nickname: string; // 사용자 닉네임
   is_notice: boolean; // 공지 여부를 나타내는 필드 추가
 }
 
@@ -74,6 +75,7 @@ export const usePosts = () => {
           comm_detail: post.comm_detail,
           created_at: post.created_at,
           commentCount: post.commentCount,
+          nickname: post.nickname,
           is_notice: post.is_notice || false, // API에서 is_notice 제공, 없으면 false
         }));
 
