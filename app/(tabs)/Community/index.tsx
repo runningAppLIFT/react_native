@@ -35,8 +35,11 @@ export default function CommunityIndex() {
     }
   };
 
-  // 게시글 렌더링 (일반 게시글)
-  const renderItem = ({ item }: { item: Post }) => (
+// 게시글 렌더링 (일반 게시글)
+const renderItem = ({ item }: { item: Post }) => {
+  const firstLine = item.comm_detail.split('\n')[0]; // 첫 번째 줄만 추출
+
+  return (
     <TouchableOpacity
       style={styles.postContainer}
       onPress={() =>
@@ -47,7 +50,9 @@ export default function CommunityIndex() {
       }
     >
       <ThemedText type="subtitle">{item.comm_title}</ThemedText>
-      <ThemedText>{item.comm_detail}</ThemedText>
+      <ThemedText numberOfLines={1} ellipsizeMode="tail">
+        {firstLine}
+      </ThemedText>
       <View style={styles.contentinner}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={{ marginRight: 10 }}>작성자 {item.user_id}</Text>
@@ -60,6 +65,8 @@ export default function CommunityIndex() {
       </View>
     </TouchableOpacity>
   );
+};
+
 
   // ListFooterComponent: 스크롤 끝에서의 UI
   const renderFooter = () => {

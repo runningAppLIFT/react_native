@@ -60,6 +60,7 @@ export default function WritePost() {
     }
 
     const postData = {
+      user_id: user?.userId,
       comm_title: title,
       comm_detail: content,
     };
