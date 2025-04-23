@@ -184,8 +184,13 @@ export const useCourses = (user: { userId: string } | null) => {
 
     try {
       const response = await fetch(
-        `${API_URL}/courses/saves/${user.userId}/${course_id}`,
-        { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
+        `${API_URL}/courses/saves`,             
+          {method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+          courseId: course_id, // 저장할 코스의 ID도 포함
+          }),
+        }
       );
   
       if (!response.ok) {
@@ -196,7 +201,7 @@ export const useCourses = (user: { userId: string } | null) => {
       const result = await response.json();
     } catch (error: any) {
       
-      alert(`코스 저장에 실패했습니다: ${error.message}`);
+      alert(`코스 삭제에 실패했습니다: ${error.message}`);
 
     } finally {
       setIsLoading(false);

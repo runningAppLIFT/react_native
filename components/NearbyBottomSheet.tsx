@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/authContext';
 import { useCourses } from '@/hooks/useCourses';
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
@@ -35,13 +36,14 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   onClose,
   courses,
   onSelectCourse,
+  loading,
 }) => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const {setCourses, coursesSave, isLoading } = useCourses({
-    userId: ''
-  });
+    const { user } = useAuth();
+
+  const {setCourses, coursesSave, isLoading } = useCourses(user);
 
   const itemsPerPage = 4;
 
@@ -59,6 +61,10 @@ export const NearbyBottomSheet: React.FC<Props> = ({
     }
   };
 
+  const selectedIndex = useMemo(() => {
+    if (!selectedCourse) return -1;
+    return courses.findIndex(c => c.course_id === selectedCourse.course_id);
+  }, [selectedCourse, courses]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -94,23 +100,14 @@ export const NearbyBottomSheet: React.FC<Props> = ({
   }, [isVisible]);
 
   useEffect(() => {
-    if (!selectedCourse || !courses.length) return;
-  
-    const index = courses.findIndex(c => c.course_id === selectedCourse.course_id);
-  
-    // 못 찾았으면 실행하지 않음
-    if (index === -1) return;
-  
-    const page = Math.floor(index / itemsPerPage);
-  
-    // 페이지 스크롤
-    flatListRef.current?.scrollToOffset({
-      offset: (width - 32) * page,
-      animated: true,
-    });
-  
-    setCurrentPage(page + 1);
-  }, [selectedCourse, courses]);
+    if (selectedCourse === null && courses.length > 0) {
+      const pageIndex = currentPage - 1;
+      flatListRef.current?.scrollToOffset({
+        offset: (width - 32) * pageIndex,
+        animated: false,
+      });
+    }
+  }, [selectedCourse]);
   
 
 
@@ -176,7 +173,9 @@ export const NearbyBottomSheet: React.FC<Props> = ({
               <TouchableOpacity onPress={() => setSelectedCourse(null)}>
                 <Text style={styles.backBtn}>←</Text>
               </TouchableOpacity>
-              <Text style={styles.title}>{`${selectedCourseFromList.course_id}. ${selectedCourseFromList .course_title}`}</Text>
+              <Text style={styles.title}>
+              {`${selectedIndex + 1}. ${selectedCourseFromList.course_title}`}
+              </Text>
               <Text style={styles.detailText}>코스 설명 : {selectedCourseFromList.course_content}</Text>
               <TouchableOpacity onPress={() => handleSaveCourse(selectedCourseFromList)}>
                 <Text style={styles.saveIcon}>💾 저장</Text>
@@ -188,8 +187,7 @@ export const NearbyBottomSheet: React.FC<Props> = ({
               <FlatList
                 data={pages}
                 ref={flatListRef}
-                keyExtractor={(item) => item.course_id}
-                initialScrollIndex={(currentPage - 1) * itemsPerPage}
+                keyExtractor={(_, index) => index.toString()}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}

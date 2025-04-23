@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/authContext';
 import { useCourses } from '@/hooks/useCourses';
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
@@ -25,6 +26,7 @@ interface Props {
   onClose: () => void;
   registeredCourses: Course[];
   savedCourses: Course[];
+  onSelectCourse: (course_id: number) => void; 
 }
 
 export const Mybottomsheet: React.FC<Props> = ({
@@ -32,13 +34,15 @@ export const Mybottomsheet: React.FC<Props> = ({
   onClose,
   registeredCourses,
   savedCourses,
+  onSelectCourse,
 }) => {
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'registered' | 'saved'>('registered');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  const {coursesSave, coursesDelete } = useCourses({});
-
+  const { user } = useAuth();
+  const {setCourses, coursesDelete, isLoading } = useCourses(user);
 
   const translateY = useRef(new Animated.Value(height)).current;
   const flatListRef = useRef<FlatList<any>>(null);
@@ -144,34 +148,47 @@ export const Mybottomsheet: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={pages}
-            ref={flatListRef}
-            keyExtractor={(_, index) => index.toString()}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const page = Math.round(
-                e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
-              );
-              setCurrentPage(page + 1);
-            }}
-            renderItem={({ item: courseGroup, index }) => (
-              <View style={styles.itemsContainer}>
-                {courseGroup.map((item, idx) => (
-                  <TouchableOpacity key={item.course_id} style={styles.item}>
-                    <Text style={styles.itemText}>
-                      {(index * itemsPerPage) + idx + 1}. {item.course_title}
-                    </Text>
-                    <Text style={styles.itemText}>삭제</Text>
-                  </TouchableOpacity>
-
-                ))}
-              </View>
-            )}
-          />
-          {renderPagination()}
+            <FlatList
+                   data={pages}
+                   ref={flatListRef}
+                   keyExtractor={(_, index) => index.toString()}
+                   horizontal
+                   pagingEnabled
+                   showsHorizontalScrollIndicator={false}
+                   getItemLayout={(_, index) => ({
+                     length: width - 32,
+                     offset: (width - 32) * index,
+                     index,
+                   })}
+                   onMomentumScrollEnd={(e) => {
+                     const page = Math.round(
+                       e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
+                     );
+                     setCurrentPage(page + 1);
+                   }}
+                   renderItem={({ item: courseGroup, index }) => (
+                     <View style={{ width: width - 32 }}>
+                       {courseGroup.map((item, idx) => (
+                          <View
+                            key={item.course_id}
+                            style={styles.item}
+                          >
+                            <Text style={styles.itemText}>
+                              {(index * itemsPerPage) + idx + 1}. {item.course_title}
+                            </Text>
+                            <TouchableOpacity
+                             onPress={async () => {
+                              await coursesDelete(item.course_id);
+                            }}
+                          >
+                              <Text style={{ color: 'red' }}>삭제</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                     </View>
+                   )}
+                 />
+                 {renderPagination()}
         </Animated.View>
       </View>
     </TouchableWithoutFeedback>
@@ -215,10 +232,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   item: {
+    flexDirection: 'row',           // 가로 정렬
+    justifyContent: 'space-between', // 좌우로 요소 배치
+    alignItems: 'center',           // 수직 중앙 정렬\
+    
     paddingVertical: 8,
-    borderBottomWidth: 2,
     borderRadius: 12,
-    borderBottomColor: '#fff',
     backgroundColor: '#A1CEFF',
     paddingHorizontal: 12,
     marginBottom: 8,
