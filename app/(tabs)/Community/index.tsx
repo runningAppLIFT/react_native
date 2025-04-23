@@ -6,22 +6,15 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
-import Animated, { useSharedValue } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { usePosts, Post } from '@/hooks/community/usePosts';
-import { useAuth } from '@/hooks/authContext'; // Import useAuth
-
-// 공지사항 데이터 (정적 데이터로 유지)
-const notices = [
-  { id: 1, title: '게시판 이용 안내사항', date: '2025.03.28', content: '게시판 이용 방법과 규칙에 대해 안내드립니다.' },
-  { id: 2, title: '새로운 기능 추가 안내', date: '2025.03.30', content: '새로운 기능이 추가되었습니다. 자세한 내용을 확인하세요.' },
-  { id: 3, title: '시스템 점검 공지', date: '2025.04.01', content: '시스템 점검으로 인해 서비스 이용이 일시적으로 중단됩니다.' },
-];
+import { useAuth } from '@/hooks/authContext';
 
 export default function CommunityIndex() {
   const router = useRouter();
-  const { posts, isLoading, error, loadInitialPosts, loadMore, pageInfo } = usePosts();
-  const { user } = useAuth(); // Get user from AuthContext
+  const { posts, notices, isLoading, error, loadInitialPosts, loadMore, pageInfo } = usePosts();
+  const { user } = useAuth();
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -31,7 +24,7 @@ export default function CommunityIndex() {
   // 화면 포커스 시 데이터 새로고침
   useFocusEffect(
     useCallback(() => {
-      loadInitialPosts(); // 화면이 포커스될 때마다 데이터 새로고침
+      loadInitialPosts();
     }, [loadInitialPosts])
   );
 
@@ -42,7 +35,7 @@ export default function CommunityIndex() {
     }
   };
 
-  // 게시글 렌더링
+  // 게시글 렌더링 (일반 게시글)
   const renderItem = ({ item }: { item: Post }) => (
     <TouchableOpacity
       style={styles.postContainer}
@@ -62,7 +55,7 @@ export default function CommunityIndex() {
         </View>
         <View style={styles.likeContainer}>
           <IconSymbol name="message" color="#000" />
-          <Text>{item.commentCount}</Text> 
+          <Text>{item.commentCount}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -105,7 +98,7 @@ export default function CommunityIndex() {
         '게시글을 작성하려면 로그인이 필요합니다. 로그인 화면으로 이동하시겠습니까?',
         [
           { text: '취소', style: 'cancel' },
-          { text: '로그인', onPress: () => router.push('/(tabs)/login') }, // Adjust the login route as needed
+          { text: '로그인', onPress: () => router.push('/(tabs)/login') },
         ]
       );
     } else {
@@ -116,7 +109,7 @@ export default function CommunityIndex() {
   return (
     <PanGestureHandler
       onGestureEvent={onGestureEvent}
-      activeOffsetX={[-10, 10]} // 스와이프 민감도 조정
+      activeOffsetX={[-10, 10]}
     >
       <Animated.View style={{ flex: 1 }}>
         <ThemedView style={styles.container}>
@@ -129,32 +122,36 @@ export default function CommunityIndex() {
           <ThemedView style={styles.noticeContainer}>
             <ThemedText style={styles.noticeTop}>공지사항</ThemedText>
             <View style={styles.notice}>
-              <Swiper
-                autoplay
-                autoplayTimeout={4}
-                showsPagination={true}
-                dotColor="lightgray"
-                activeDotColor="black"
-                dotStyle={{ width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 }}
-                activeDotStyle={{ width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 }}
-                height={60}
-                paginationStyle={{ bottom: -10 }}
-              >
-                {notices.map(notice => (
-                  <TouchableOpacity
-                    key={notice.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/(tabs)/Community/postDetail',
-                        params: { id: notice.id },
-                      })
-                    }
-                  >
-                    <ThemedText style={styles.noticetitle}>{notice.title}</ThemedText>
-                    <ThemedText>{notice.date}</ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </Swiper>
+              {notices.length > 0 ? (
+                <Swiper
+                  autoplay
+                  autoplayTimeout={4}
+                  showsPagination={true}
+                  dotColor="lightgray"
+                  activeDotColor="black"
+                  dotStyle={{ width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 }}
+                  activeDotStyle={{ width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 }}
+                  height={60}
+                  paginationStyle={{ bottom: -10 }}
+                >
+                  {notices.map((notice) => (
+                    <TouchableOpacity
+                      key={notice.comm_number}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(tabs)/Community/postDetail',
+                          params: { post: JSON.stringify(notice) },
+                        })
+                      }
+                    >
+                      <ThemedText style={styles.noticetitle}>{notice.comm_title}</ThemedText>
+                      <ThemedText>{new Date(notice.created_at).toLocaleDateString()}</ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </Swiper>
+              ) : (
+                <ThemedText style={styles.statusText}>공지사항이 없습니다.</ThemedText>
+              )}
             </View>
           </ThemedView>
 
@@ -171,15 +168,15 @@ export default function CommunityIndex() {
             nestedScrollEnabled={true}
             initialNumToRender={10}
             windowSize={5}
-            onEndReached={() => pageInfo.hasNextPage && loadMore()} // 더보기 호출
+            onEndReached={() => pageInfo.hasNextPage && loadMore()}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={renderFooter} // 푸터 컴포넌트 추가
+            ListFooterComponent={renderFooter}
           />
 
           {/* 플로팅 버튼 (게시글 추가) */}
           <TouchableOpacity
             style={styles.circleButton}
-            onPress={handleAddPost} // Use the new handler
+            onPress={handleAddPost}
           >
             <Text style={styles.circlebtntext}>+</Text>
           </TouchableOpacity>
@@ -189,7 +186,7 @@ export default function CommunityIndex() {
   );
 }
 
-// 스타일 수정 및 추가
+// 스타일은 그대로 유지
 const styles = StyleSheet.create({
   container: {
     flex: 1,
