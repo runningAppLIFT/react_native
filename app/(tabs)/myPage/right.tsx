@@ -1,17 +1,17 @@
 import { router } from 'expo-router';
 import React, { useEffect, useCallback } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, Alert } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import Animated, { useSharedValue } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { usePosts, Post } from '@/hooks/community/usePosts';
+import { useMyPosts, Post } from '@/hooks/community/useMyPosts'; // useMyPosts로 변경
 import { useAuth } from '@/hooks/authContext';
 
 export default function MyPageRight() {
-  const { posts, isLoading, error, loadInitialPosts, loadMore, pageInfo } = usePosts();
+  const { posts, isLoading, error, loadInitialPosts, loadMore, pageInfo } = useMyPosts();
   const { user } = useAuth();
 
   // 초기 데이터 로드
@@ -33,31 +33,38 @@ export default function MyPageRight() {
     }
   };
 
-  // 게시글 렌더링
-  const renderItem = ({ item }: { item: Post }) => (
-    <TouchableOpacity
-      style={styles.postContainer}
-      onPress={() =>
-        router.push({
-          pathname: '/(tabs)/Community/postDetail',
-          params: { post: JSON.stringify(item) },
-        })
-      }
-    >
-      <ThemedText type="subtitle">{item.comm_title}</ThemedText>
-      <ThemedText>{item.comm_detail}</ThemedText>
-      <ThemedView style={styles.contentinner}>
-        <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ marginRight: 10 }}>작성자 {item.user_id}</Text>
-          <Text>{new Date(item.created_at).toLocaleDateString()}</Text>
-        </ThemedView>
-        <ThemedView style={styles.likeContainer}>
-          <IconSymbol name="message" color="#000" />
-          <Text>{item.commentCount}</Text>
-        </ThemedView>
+// 게시글 렌더링
+const renderItem = ({ item }: { item: Post }) => (
+  <TouchableOpacity
+    style={styles.postContainer}
+    onPress={() =>
+      router.push({
+        pathname: '/(tabs)/Community/postDetail',
+        params: { 
+          post: JSON.stringify(item),
+          previousScreen: '/(tabs)/myPage/right' // 이전 화면 경로 추가
+        },
+      })
+    }
+  >
+    <ThemedText type="subtitle" numberOfLines={1} ellipsizeMode="tail">
+      {item.comm_title}
+    </ThemedText>
+    <ThemedText numberOfLines={1} ellipsizeMode="tail">
+      {item.comm_detail}
+    </ThemedText>
+    <ThemedView style={styles.contentinner}>
+      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF7FF' }}>
+        <Text style={{ marginRight: 10 }}>작성자 {user?.nickname || item.user_id}</Text>
+        <Text>{new Date(item.created_at).toLocaleDateString()}</Text>
       </ThemedView>
-    </TouchableOpacity>
-  );
+      <ThemedView style={styles.likeContainer}>
+        <IconSymbol name="message" color="#000" />
+        <Text>{item.commentCount}</Text>
+      </ThemedView>
+    </ThemedView>
+  </TouchableOpacity>
+);
 
   // ListFooterComponent: 스크롤 끝에서의 UI
   const renderFooter = () => {
@@ -88,22 +95,6 @@ export default function MyPageRight() {
     return null;
   };
 
-  // 게시글 작성 버튼 클릭 핸들러
-  const handleAddPost = () => {
-    if (!user || !user.userId) {
-      Alert.alert(
-        '로그인 필요',
-        '게시글을 작성하려면 로그인이 필요합니다. 로그인 화면으로 이동하시겠습니까?',
-        [
-          { text: '취소', style: 'cancel' },
-          { text: '로그인', onPress: () => router.push('/(tabs)/login') },
-        ]
-      );
-    } else {
-      router.push('/(tabs)/Community/addPost');
-    }
-  };
-
   return (
     <PanGestureHandler
       onGestureEvent={onGestureEvent}
@@ -117,7 +108,14 @@ export default function MyPageRight() {
           </ThemedView>
 
           {/* 게시글 리스트 */}
-          {error && <Text style={[styles.statusText, { color: 'red' }]}>{error}</Text>}
+          {error && (
+            <ThemedView style={styles.footerContainer}>
+              <Text style={[styles.statusText, { color: 'red' }]}>{error}</Text>
+              <TouchableOpacity onPress={loadInitialPosts}>
+                <Text style={[styles.footerText, { color: '#0066FF' }]}>재시도</Text>
+              </TouchableOpacity>
+            </ThemedView>
+          )}
           {!isLoading && !error && posts.length === 0 && (
             <Text style={styles.statusText}>게시글이 없습니다.</Text>
           )}
@@ -132,8 +130,10 @@ export default function MyPageRight() {
             onEndReached={() => pageInfo.hasNextPage && loadMore()}
             onEndReachedThreshold={0.5}
             ListFooterComponent={renderFooter}
+            refreshControl={
+              <RefreshControl refreshing={isLoading} onRefresh={loadInitialPosts} />
+            }
           />
-
         </ThemedView>
       </Animated.View>
     </PanGestureHandler>
@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
   likeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#EEF7FF'
   },
   statusText: {
     textAlign: 'center',

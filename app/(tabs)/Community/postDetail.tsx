@@ -23,7 +23,7 @@ import { usePosts } from '@/hooks/community/usePosts';
 
 export default function PostDetail() {
   const router = useRouter();
-  const { post } = useLocalSearchParams();
+  const { post, previousScreen } = useLocalSearchParams(); // previousScreen 파라미터도 가져옴
   let postId: number | null = null;
 
   // postId 파싱 및 유효성 검사 (수정: 더 엄격한 검사)
@@ -59,6 +59,15 @@ export default function PostDetail() {
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [postDeleteModalVisible, setPostDeleteModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+    // 뒤로가기 처리 함수
+    const handleBack = () => {
+      if (previousScreen) {
+        router.push(previousScreen as string); // 이전 화면으로 이동
+      } else {
+        router.back(); // previousScreen이 없으면 기본 뒤로가기
+      }
+    };
 
   // 댓글 새로고침 핸들러
   const onRefresh = useCallback(async () => {
@@ -212,7 +221,7 @@ export default function PostDetail() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerText}>자유게시판</Text>
@@ -293,7 +302,7 @@ export default function PostDetail() {
                   <View key={reply.coment_id} style={styles.replyBox}>
                     <View style={styles.commentHeader}>
                       <Text style={styles.commentAuthor}>
-                        {reply.author || `${reply.user_id}`}
+                        {reply.author || ` ${reply.user_id}`}
                       </Text>
                       {user && user.userId === reply.user_id && (
                         <TouchableOpacity
