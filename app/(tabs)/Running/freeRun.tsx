@@ -60,9 +60,10 @@ export default function FreeRun() {
     setStartTime(Date.now());
     setElapsedTime(0);
     setShowModal(true);
-
+    setPace(0);
+    setCurrentPace(0);
+  
     try {
-      // 실시간 위치 추적 시작 (1초 간격, 2미터 이동 시 업데이트)
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -80,16 +81,22 @@ export default function FreeRun() {
               const updatedPath = [...prev, newCoord];
               const newDistance = calculateDistance(updatedPath);
               setDistance(newDistance);
-              if (newDistance > 0) {
-                const avgPace = elapsedTime / newDistance / 60; // 분/km
+  
+              // 평균 페이스 계산: 속력(거리/시간)으로 1km 주행 시간(초) 계산
+              if (newDistance > 0 && elapsedTime > 0) {
+                const speed = newDistance / elapsedTime; // km/s
+                const avgPace = (1 / speed) || 0; // 1km를 뛰는 데 걸리는 시간(초)
                 setPace(avgPace);
               }
+  
+              // 현재 페이스 계산: 마지막 두 좌표 기반, 초/km
               if (updatedPath.length >= 2) {
                 const lastTwo = updatedPath.slice(-2);
-                const segmentDistance = calculateDistance(lastTwo);
-                const segmentTime = (lastTwo[1].timestamp! - lastTwo[0].timestamp!) / 1000;
+                const segmentDistance = calculateDistance(lastTwo); // km
+                const segmentTime = (lastTwo[1].timestamp! - lastTwo[0].timestamp!) / 1000; // 초
                 if (segmentDistance > 0 && segmentTime > 0) {
-                  const currPace = segmentTime / segmentDistance / 60; // 분/km
+                  const speed = segmentDistance / segmentTime; // km/s
+                  const currPace = (1 / speed) || 0; // 1km를 뛰는 데 걸리는 시간(초)
                   setCurrentPace(currPace);
                 }
               }
@@ -134,21 +141,18 @@ export default function FreeRun() {
     }
     setIsRunning(false);
     setShowModal(false);
-
-    // 데이터 검증 (pace 제외)
+  
     const missingData: string[] = [];
     if (distance === 0) missingData.push('거리');
     if (elapsedTime === 0) missingData.push('시간');
     if (path.length === 0) missingData.push('경로');
-
-    // 누락된 데이터가 있을 경우 알림 표시
+  
     if (missingData.length > 0) {
       Alert.alert(
         '데이터 누락',
         `다음 데이터가 없습니다: ${missingData.join(', ')}. 러닝을 시작해주세요`,
         [{ text: '확인', style: 'cancel' }]
       );
-      // 상태 초기화
       setPath([]);
       setDistance(0);
       setElapsedTime(0);
@@ -156,15 +160,14 @@ export default function FreeRun() {
       setPace(0);
       setCurrentPace(0);
       setIsLocked(false);
-      return; // detailRun으로 이동하지 않음
+      return;
     }
-    // 데이터 포맷팅
+  
     const formattedDistance = distance.toFixed(2);
     const formattedTime = formatTime(elapsedTime);
-    const avgPace = pace > 0 ? `${Math.floor(pace)}'${(Math.round((pace % 1) * 60)).toString().padStart(2, '0')}"` : "0'00\"";
+    const avgPace = pace > 0 ? `${Math.floor(pace / 60)}'${(Math.round(pace % 60)).toString().padStart(2, '0')}"` : "0'00\"";
     const date = new Date().toLocaleString();
-
-    // detailRun으로 이동
+  
     router.push({
       pathname: '/(tabs)/Running/detailRun',
       params: {
@@ -175,8 +178,7 @@ export default function FreeRun() {
         date: date,
       },
     });
-
-    // 상태 초기화
+  
     setPath([]);
     setDistance(0);
     setElapsedTime(0);
