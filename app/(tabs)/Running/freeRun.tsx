@@ -135,11 +135,36 @@ export default function FreeRun() {
     setIsRunning(false);
     setShowModal(false);
 
+    // 데이터 검증 (pace 제외)
+    const missingData: string[] = [];
+    if (distance === 0) missingData.push('거리');
+    if (elapsedTime === 0) missingData.push('시간');
+    if (path.length === 0) missingData.push('경로');
+
+    // 누락된 데이터가 있을 경우 알림 표시
+    if (missingData.length > 0) {
+      Alert.alert(
+        '데이터 누락',
+        `다음 데이터가 없습니다: ${missingData.join(', ')}. 러닝을 시작해주세요`,
+        [{ text: '확인', style: 'cancel' }]
+      );
+      // 상태 초기화
+      setPath([]);
+      setDistance(0);
+      setElapsedTime(0);
+      setStartTime(null);
+      setPace(0);
+      setCurrentPace(0);
+      setIsLocked(false);
+      return; // detailRun으로 이동하지 않음
+    }
+    // 데이터 포맷팅
     const formattedDistance = distance.toFixed(2);
     const formattedTime = formatTime(elapsedTime);
     const avgPace = pace > 0 ? `${Math.floor(pace)}'${(Math.round((pace % 1) * 60)).toString().padStart(2, '0')}"` : "0'00\"";
     const date = new Date().toLocaleString();
 
+    // detailRun으로 이동
     router.push({
       pathname: '/(tabs)/Running/detailRun',
       params: {
@@ -151,6 +176,7 @@ export default function FreeRun() {
       },
     });
 
+    // 상태 초기화
     setPath([]);
     setDistance(0);
     setElapsedTime(0);
