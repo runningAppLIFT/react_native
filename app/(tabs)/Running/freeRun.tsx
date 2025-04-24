@@ -250,6 +250,7 @@ export default function FreeRun() {
         toggleLock={toggleLock}
         isPaused={isPaused}
         stopRunning={stopRunning}
+        isLocked={isLocked}
       />
 
       <View style={[styles.buttonWrapper, { zIndex: 1000 }]}>

@@ -11,6 +11,7 @@ interface RunModalProps {
   toggleLock: () => void;
   isPaused: boolean;
   stopRunning: () => void;
+  isLocked: boolean;
 }
 
 // 시간 포맷팅 함수 (HH:MM:SS 형식으로 확장)
@@ -40,14 +41,12 @@ const RunModal: React.FC<RunModalProps> = ({
   toggleLock,
   isPaused,
   stopRunning,
+  isLocked, // prop으로 받음
 }) => {
-  const [isLocked, setIsLocked] = useState(false); // 잠금 상태
-  const [pressStartTime, setPressStartTime] = useState<number | null>(null); // 길게 누르기 시작 시간
+  const [pressStartTime, setPressStartTime] = useState<number | null>(null);
 
-  // 잠금 상태 토글
   const handleLongPress = () => {
-    setIsLocked((prev) => !prev);
-    toggleLock();
+    toggleLock(); // FreeRun의 isLocked 상태만 업데이트
   };
 
   const handlePressIn = () => {
