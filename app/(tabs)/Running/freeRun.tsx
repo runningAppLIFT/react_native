@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Alert } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useMapStore } from '@/stores/mapStore';
 import { useLocation } from '../../../hooks/useLocation';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import RunModal from '@/components/RunModal';
+import * as Location from 'expo-location';
 
 // 좌표 인터페이스 정의
 interface Coordinate {
   latitude: number;
   longitude: number;
+  timestamp?: number;
 }
 
 // 지도 영역 인터페이스 정의
@@ -22,16 +24,29 @@ interface Region extends Coordinate {
 export default function FreeRun() {
   const router = useRouter();
   const { region, setRegion } = useMapStore();
-  const [isRunning, setIsRunning] = useState(false); // 달리기 상태
-  const [isPaused, setIsPaused] = useState(false); // 일시정지 상태
-  const [path, setPath] = useState<Coordinate[]>([]); // 이동 경로
-  const [startTime, setStartTime] = useState<number | null>(null); // 시작 시간
-  const [elapsedTime, setElapsedTime] = useState(0); // 경과 시간
-  const [watchId, setWatchId] = useState<number | null>(null); // 위치 추적 ID
-  const [showModal, setShowModal] = useState(false); // 모달 표시 여부
-  const [pace, setPace] = useState(0); // 평균 페이스
-  const [currentPace, setCurrentPace] = useState(0); // 현재 페이스
-  const [isLocked, setIsLocked] = useState(false); // 잠금 상태
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [path, setPath] = useState<Coordinate[]>([]);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [watchId, setWatchId] = useState<Location.LocationSubscription | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [pace, setPace] = useState(0);
+  const [currentPace, setCurrentPace] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [distance, setDistance] = useState(0);
+
+  // 위치 권한 확인 및 요청
+  useEffect(() => {
+    const requestPermissions = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('위치 권한 필요', '이 앱은 위치 정보가 필요합니다.');
+        router.back();
+      }
+    };
+    requestPermissions();
+  }, []);
 
   // 위치 정보 가져오기
   useLocation(setRegion);
@@ -41,51 +56,60 @@ export default function FreeRun() {
     setIsRunning(true);
     setIsPaused(false);
     setPath([]);
+    setDistance(0);
     setStartTime(Date.now());
     setElapsedTime(0);
     setShowModal(true);
 
-    const { Location } = require('expo-location');
-    const id = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 400,
-        distanceInterval: 1,
-      },
-      (location) => {
-        if (!isPaused) {
-          const newCoord: Coordinate = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-          setPath((prev) => {
-            const updatedPath = [...prev, newCoord];
-            const distance = calculateDistance(updatedPath);
-            if (distance > 0) {
-              const avgPace = (elapsedTime / distance) * 1000;
-              setPace(Math.floor(avgPace));
-            }
-            if (updatedPath.length >= 2) {
-              const lastTwo = updatedPath.slice(-2);
-              const segmentDistance = calculateDistance(lastTwo);
-              const segmentTime = 400 / 1000;
-              if (segmentDistance > 0) {
-                const currPace = (segmentTime / segmentDistance) * 1000;
-                setCurrentPace(Math.floor(currPace));
+    try {
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000,
+          distanceInterval: 2,
+        },
+        (location) => {
+          if (!isPaused && location.coords.accuracy && location.coords.accuracy < 20) {
+            const newCoord: Coordinate = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              timestamp: location.timestamp,
+            };
+            setPath((prev) => {
+              const updatedPath = [...prev, newCoord];
+              const newDistance = calculateDistance(updatedPath);
+              setDistance(newDistance);
+              if (newDistance > 0) {
+                const avgPace = (elapsedTime / newDistance) * 1000 / 60;
+                setPace(Math.floor(avgPace));
               }
-            }
-            return updatedPath;
-          });
-          setRegion({
-            latitude: newCoord.latitude,
-            longitude: newCoord.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          });
+              if (updatedPath.length >= 2) {
+                const lastTwo = updatedPath.slice(-2);
+                const segmentDistance = calculateDistance(lastTwo);
+                const segmentTime = (lastTwo[1].timestamp! - lastTwo[0].timestamp!) / 1000;
+                if (segmentDistance > 0 && segmentTime > 0) {
+                  const currPace = (segmentTime / segmentDistance) * 1000 / 60;
+                  setCurrentPace(Math.floor(currPace));
+                }
+              }
+              return updatedPath;
+            });
+            setRegion({
+              latitude: newCoord.latitude,
+              longitude: newCoord.longitude,
+              latitudeDelta: 0.005,
+              longitudeDelta: 0.005,
+            });
+          }
         }
-      }
-    );
-    setWatchId(id);
+      );
+      setWatchId(subscription);
+    } catch (error) {
+      console.error('Location watch error:', error);
+      Alert.alert('오류', '위치 추적을 시작할 수 없습니다.');
+      setIsRunning(false);
+      setShowModal(false);
+    }
   };
 
   // 일시정지/재개 토글 함수
@@ -98,48 +122,42 @@ export default function FreeRun() {
     setIsPaused(!isPaused);
   };
 
+  // 달리기 종료 함수
+  const stopRunning = () => {
+    if (watchId !== null) {
+      watchId.remove();
+      setWatchId(null);
+    }
+    if (!isPaused) {
+      setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
+    }
+    setIsRunning(false);
+    setShowModal(false);
 
+    const formattedDistance = distance.toFixed(2);
+    const formattedTime = formatTime(elapsedTime);
+    const avgPace = pace > 0 ? `${Math.floor(pace)}'${Math.round((pace % 1) * 60)}"` : "0'0\"";
+    const date = new Date().toLocaleString();
 
-// 달리기 종료 함수
-const stopRunning = () => {
-  if (watchId !== null) {
-    const { Location } = require('expo-location');
-    Location.stopLocationUpdatesAsync(watchId);
-    setWatchId(null);
-  }
-  if (!isPaused) {
-    setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
-  }
-  setIsRunning(false);
-  setShowModal(false);
+    router.push({
+      pathname: '/(tabs)/Running/detailRun',
+      params: {
+        distance: formattedDistance,
+        time: formattedTime,
+        pace: avgPace,
+        path: JSON.stringify(path),
+        date: date,
+      },
+    });
 
-  // 계산된 데이터
-  const distance = calculateDistance(path).toFixed(2); // 거리(km)
-  const formattedTime = formatTime(elapsedTime); // 시간 (hh:mm)
-  const avgPace = `${Math.floor(pace / 60)}'${pace % 60}"`; // 페이스
-  const date = new Date().toLocaleString(); // 현재 날짜
-
-  // 기록 페이지로 이동
-  router.push({
-    pathname: '/(tabs)/Running/detailRun',
-    params: {
-      distance: distance,
-      time: formattedTime,
-      pace: avgPace,
-      path: JSON.stringify(path), // 배열을 문자열로 변환해 전달
-      date: date,
-    },
-  });
-
-  // 상태 초기화
-  setPath([]);
-  setElapsedTime(0);
-  setStartTime(null);
-  setPace(0);
-  setCurrentPace(0);
-  setIsLocked(false);
-};
-
+    setPath([]);
+    setDistance(0);
+    setElapsedTime(0);
+    setStartTime(null);
+    setPace(0);
+    setCurrentPace(0);
+    setIsLocked(false);
+  };
 
   // 잠금 상태 토글 함수
   const toggleLock = () => {
@@ -155,17 +173,18 @@ const stopRunning = () => {
       }, 1000);
     }
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      if (interval) clearInterval(interval);
     };
   }, [isRunning, startTime, isPaused]);
 
   // 시간 포맷팅 함수
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return hours > 0
+      ? `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // 거리 계산 함수
@@ -191,16 +210,16 @@ const stopRunning = () => {
 
   return (
     <View style={styles.container}>
-      {/* 지도 표시 */}
       <MapView
         style={styles.map}
         showsUserLocation
+        followsUserLocation={isRunning}
         region={region || undefined}
         onRegionChangeComplete={(newRegion: Region) =>
           !isRunning && setRegion(newRegion)
         }
       >
-        {path.length > 0 && (
+        {path.length > 1 && (
           <Polyline coordinates={path} strokeColor="#FF0000" strokeWidth={3} />
         )}
         {region && !isRunning && (
@@ -214,7 +233,6 @@ const stopRunning = () => {
         )}
       </MapView>
 
-      {/* 뒤로 가기 버튼 */}
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
@@ -223,19 +241,17 @@ const stopRunning = () => {
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
 
-      {/* 러닝 정보 모달 */}
       <RunModal
         visible={showModal}
         elapsedTime={elapsedTime}
-        distance={calculateDistance(path)}
+        distance={distance}
         pace={pace}
         currentPace={currentPace}
         toggleLock={toggleLock}
-        isPaused={isPaused} // 일시정지 상태 전달
-        stopRunning={stopRunning} // 종료 함수 전달
+        isPaused={isPaused}
+        stopRunning={stopRunning}
       />
 
-      {/* 버튼 그룹 (종료 버튼 제거) */}
       <View style={[styles.buttonWrapper, { zIndex: 1000 }]}>
         {isRunning && !isPaused && (
           <TouchableOpacity

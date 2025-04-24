@@ -13,11 +13,22 @@ interface RunModalProps {
   stopRunning: () => void;
 }
 
-// 시간 포맷팅 함수
+// 시간 포맷팅 함수 (HH:MM:SS 형식으로 확장)
 const formatTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return hours > 0
+    ? `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// 페이스 포맷팅 함수 (초/km → MM'SS" 형식)
+const formatPace = (seconds: number) => {
+  if (seconds <= 0) return "0'00\""; // 유효하지 않은 페이스 처리
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}'${secs.toString().padStart(2, '0')}"`;
 };
 
 const RunModal: React.FC<RunModalProps> = ({
@@ -78,11 +89,11 @@ const RunModal: React.FC<RunModalProps> = ({
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>페이스</Text>
-              <Text style={styles.statValue}>{formatTime(pace)}</Text>
+              <Text style={styles.statValue}>{formatPace(pace)}</Text> {/* 페이스 형식 변경 */}
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>시간</Text>
-              <Text style={styles.statValue}>{formatTime(elapsedTime)}</Text>
+              <Text style={styles.statValue}>{formatTime(elapsedTime)}</Text> {/* 시간 형식 확장 */}
             </View>
           </View>
           {/* 현재 페이스 또는 종료 버튼 표시 */}
@@ -102,9 +113,7 @@ const RunModal: React.FC<RunModalProps> = ({
             ) : (
               <>
                 <Text style={styles.currentPaceLabel}>현재 페이스</Text>
-                <Text style={styles.currentPaceValue}>
-                  {formatTime(currentPace)}
-                </Text>
+                <Text style={styles.currentPaceValue}>{formatPace(currentPace)}</Text> {/* 페이스 형식 변경 */}
               </>
             )}
           </View>
