@@ -153,7 +153,9 @@ const renderItem = ({ item }: { item: Post }) => {
                       }
                     >
                       <ThemedText style={styles.noticetitle}>{notice.comm_title}</ThemedText>
-                      <ThemedText>{new Date(notice.created_at).toLocaleDateString()}</ThemedText>
+                      <ThemedText style={styles.noticeDate}>
+                        {new Date(notice.created_at).toLocaleDateString()}
+                      </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </Swiper>
@@ -282,6 +284,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+    color: '#000000'
+  },
+  noticeDate: {
+    fontSize: 14,        // 날짜 텍스트 크기
+    fontWeight: '400',   // 가벼운 글자 두께
+    color: '#000000',    // 검정색
+    marginTop: 4,        // 날짜와 제목 간격 추가
   },
   circleButton: {
     position: 'absolute',
