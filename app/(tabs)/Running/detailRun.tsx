@@ -12,34 +12,61 @@ const API_URL = Constants.expoConfig?.extra?.apiUrl;
 interface RunData {
   date: string;
   distance: string;
-  time: { hours?: number; minutes?: number; seconds?: number } | string;
-  pace: { minutes?: number; seconds?: number } | string;
+  time: string;
+  pace: string;
   title: string;
   description: string;
   coordinates: { latitude: number; longitude: number }[];
 }
 
-// 사용자 위치 타입 정의
 interface UserLocation {
   latitude: number;
   longitude: number;
 }
 
 export default function DetailRunScreen() {
-  const { record } = useLocalSearchParams();
+  // 개별 파라미터 추출
+  const { distance, time, pace, path, date, record } = useLocalSearchParams();
+
+  // record 파싱 (히스토리 모드용)
   let parsedRecord = null;
-  try {
-    parsedRecord = record ? JSON.parse(record) : null;
-  } catch (error) {
-    console.error('Error parsing record:', error);
-    Alert.alert('오류', '러닝 기록 데이터를 불러오지 못했습니다.');
+  if (record) {
+    try {
+      parsedRecord = JSON.parse(record as string);
+    } catch (error) {
+      console.error('Error parsing record:', error);
+      Alert.alert('오류', '러닝 기록 데이터를 불러오지 못했습니다.');
+    }
   }
-  const { routePath, date, distance, pace, time, title, setTitle, description, setDescription, handleSaveCourse, handleSave } = useRunRecorder();
+
+  const { routePath, setRoutePath, title, setTitle, description, setDescription, handleSaveCourse, handleSave } = useRunRecorder();
 
   const isHistoryMode = !!parsedRecord;
   const [isEditing, setIsEditing] = useState(!isHistoryMode);
-  // userLocation 상태에 타입 명시
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [localTitle, setLocalTitle] = useState(title || '');
+  const [localDescription, setLocalDescription] = useState(description || '');
+
+  // path 파싱
+  const parsedPath = path
+    ? (() => {
+        try {
+          const parsed = JSON.parse(path as string);
+          if (!Array.isArray(parsed)) throw new Error('Path is not an array');
+          return parsed;
+        } catch (error) {
+          console.error('Error parsing path:', error);
+          return [];
+        }
+      })()
+    : routePath || [];
+
+  // routePath 동기화
+  useEffect(() => {
+    if (path && parsedPath.length > 0) {
+      setRoutePath(parsedPath);
+    }
+  }, [path, parsedPath, setRoutePath]);
 
   // 현재 위치 가져오기
   useEffect(() => {
@@ -59,28 +86,26 @@ export default function DetailRunScreen() {
     })();
   }, []);
 
+  // runData 구성
   const runData: RunData = isHistoryMode
     ? {
         date: parsedRecord?.created_at || '',
         distance: parsedRecord?.run_distance || '0',
-        time: parsedRecord?.run_time || { hours: 0, minutes: 0, seconds: 0 },
-        pace: parsedRecord?.run_pace || { minutes: 0, seconds: 0 },
+        time: parsedRecord?.run_time || '0',
+        pace: parsedRecord?.run_pace || '0',
         title: parsedRecord?.run_title || '',
         description: parsedRecord?.run_content || '',
         coordinates: parsedRecord?.run_course?.coordinates || [],
       }
     : {
-        date: date || '',
-        distance: distance || '0',
-        time: time || { hours: 0, minutes: 0, seconds: 0 },
-        pace: pace || { minutes: 0, seconds: 0 },
-        title: title || '',
-        description: description || '',
-        coordinates: routePath || [],
+        date: (date as string) || new Date().toLocaleString(),
+        distance: (distance as string) || '0',
+        time: (time as string) || '00:00',
+        pace: (pace as string) || "0'00\"",
+        title: localTitle || '',
+        description: localDescription || '',
+        coordinates: parsedPath || [],
       };
-
-  const [localTitle, setLocalTitle] = useState(runData.title);
-  const [localDescription, setLocalDescription] = useState(runData.description);
 
   // 좌표가 없으면 경고
   useEffect(() => {
@@ -99,25 +124,13 @@ export default function DetailRunScreen() {
   }, [localTitle, localDescription, isHistoryMode, setTitle, setDescription]);
 
   // 페이스 포맷팅
-  const formatPace = (pace: RunData['pace']) => {
-    if (typeof pace === 'string') {
-      return pace;
-    }
-    const { minutes = 0, seconds = 0 } = pace || {};
-    return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+  const formatPace = (pace: string) => {
+    return pace; // FreeRun에서 이미 MM'SS" 형식으로 전달됨
   };
 
   // 시간 포맷팅
-  const formatRunTime = (runTime: RunData['time']) => {
-    if (typeof runTime === 'string') {
-      return runTime;
-    }
-    const { hours = 0, minutes = 0, seconds = 0 } = runTime || {};
-    let timeStr = '';
-    if (hours > 0) timeStr += `${hours}시간 `;
-    if (minutes > 0) timeStr += `${minutes}분 `;
-    if (seconds > 0 || timeStr === '') timeStr += `${seconds}초`;
-    return timeStr.trim();
+  const formatRunTime = (runTime: string) => {
+    return runTime; // FreeRun에서 이미 MM:SS 또는 HH:MM:SS 형식으로 전달됨
   };
 
   // 날짜 포맷팅
