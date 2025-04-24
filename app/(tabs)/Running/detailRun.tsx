@@ -1,35 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Alert } from 'react-native';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router'; // Add router import
+import { useLocalSearchParams, router } from 'expo-router';
 import { useRunRecorder } from '@/hooks/useRunRecorder';
 import Constants from 'expo-constants';
+import * as Location from 'expo-location';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
+interface RunData {
+  date: string;
+  distance: string;
+  time: any;
+  pace: any;
+  title: string;
+  description: string;
+  coordinates: { latitude: number; longitude: number }[];
+}
+
 export default function DetailRunScreen() {
   const { record } = useLocalSearchParams();
-  const parsedRecord = record ? JSON.parse(record) : null;
-  console.log('Received parsedRecord:', parsedRecord);
-  console.log('run_course.coordinates:', parsedRecord?.run_course?.coordinates);
+  let parsedRecord = null;
+  try {
+    parsedRecord = record ? JSON.parse(record) : null;
+  } catch (error) {
+    console.error('Error parsing record:', error);
+    Alert.alert('오류', '러닝 기록 데이터를 불러오지 못했습니다.');
+  }
   const { routePath, date, distance, pace, time, title, setTitle, description, setDescription, handleSaveCourse, handleSave } = useRunRecorder();
 
   const isHistoryMode = !!parsedRecord;
   const [isEditing, setIsEditing] = useState(!isHistoryMode);
+  const [userLocation, setUserLocation] = useState(null);
 
-  const runData = isHistoryMode
+  // 디버깅 로그
+  console.log('Raw record from useLocalSearchParams:', record);
+  console.log('Parsed record:', parsedRecord);
+  console.log('run_course:', parsedRecord?.run_course);
+  console.log('run_course.coordinates:', parsedRecord?.run_course?.coordinates);
+
+  // 현재 위치 가져오기
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('Location permission denied');
+        Alert.alert('오류', '위치 권한이 필요합니다.');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    })();
+  }, []);
+
+  const runData: RunData = isHistoryMode
     ? {
-        date: parsedRecord.created_at,
-        distance: parsedRecord.run_distance,
-        time: parsedRecord.run_time,
-        pace: parsedRecord.run_pace,
-        title: parsedRecord.run_title,
-        description: parsedRecord.run_content,
-        coordinates: parsedRecord.run_course?.coordinates?.map(([longitude, latitude]) => ({
-          latitude,
-          longitude,
-        })) || [],
+        date: parsedRecord?.created_at || '',
+        distance: parsedRecord?.run_distance || '0',
+        time: parsedRecord?.run_time || '',
+        pace: parsedRecord?.run_pace || '',
+        title: parsedRecord?.run_title || '',
+        description: parsedRecord?.run_content || '',
+        coordinates:
+          parsedRecord?.run_course && Array.isArray(parsedRecord.run_course.coordinates)
+            ? parsedRecord.run_course.coordinates.map(([longitude, latitude]) => ({
+                latitude,
+                longitude,
+              }))
+            : [],
       }
     : {
         date: Array.isArray(date) ? date[0] : date || '',
@@ -44,12 +87,31 @@ export default function DetailRunScreen() {
   const [localTitle, setLocalTitle] = useState(runData.title);
   const [localDescription, setLocalDescription] = useState(runData.description);
 
+  // 좌표가 없으면 경고
+  useEffect(() => {
+    if (runData.coordinates.length === 0) {
+      console.warn('No valid coordinates found for the run.');
+      Alert.alert('경고', '러닝 경로 데이터가 없습니다.');
+    }
+  }, [runData.coordinates]);
+
   useEffect(() => {
     if (!isHistoryMode) {
       setTitle(localTitle);
       setDescription(localDescription);
     }
   }, [localTitle, localDescription, isHistoryMode, setTitle, setDescription]);
+
+  const formatPace = (pace) => {
+    if (isHistoryMode) {
+      const { hours = 0, minutes = 0 } = pace || {};
+      let paceStr = '';
+      if (hours > 0) paceStr += `${hours}:`;
+      paceStr += `${minutes.toString().padStart(2, '0')}/km`;
+      return paceStr;
+    }
+    return pace;
+  };
 
   const formatRunTime = (runTime) => {
     if (isHistoryMode) {
@@ -63,17 +125,6 @@ export default function DetailRunScreen() {
     return runTime;
   };
 
-  const formatPace = (pace) => {
-    if (isHistoryMode) {
-      const { hours = 0, minutes = 0 } = pace || {};
-      let paceStr = '';
-      if (hours > 0) paceStr += `${hours}:`;
-      paceStr += `${minutes.toString().padStart(2, '0')}/km`;
-      return paceStr;
-    }
-    return pace;
-  };
-
   const formatDate = (dateStr) => {
     if (isHistoryMode) {
       const date = new Date(dateStr);
@@ -82,19 +133,36 @@ export default function DetailRunScreen() {
     return dateStr;
   };
 
-  const initialRegion = runData.coordinates.length > 0
-    ? {
-        latitude: runData.coordinates[0].latitude,
-        longitude: runData.coordinates[0].longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }
-    : {
-        latitude: 37.7749,
-        longitude: -122.4194,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
+  const calculateInitialRegion = (coordinates, userLoc) => {
+    if (coordinates?.length > 0) {
+      const latitudes = coordinates.map((coord) => coord.latitude);
+      const longitudes = coordinates.map((coord) => coord.longitude);
+      const minLat = Math.min(...latitudes);
+      const maxLat = Math.max(...latitudes);
+      const minLng = Math.min(...longitudes);
+      const maxLng = Math.max(...longitudes);
+
+      const latitude = (minLat + maxLat) / 2;
+      const longitude = (minLng + maxLng) / 2;
+      const latitudeDelta = (maxLat - minLat) * 1.5 || 0.01;
+      const longitudeDelta = (maxLng - minLng) * 1.5 || 0.01;
+
+      return { latitude, longitude, latitudeDelta, longitudeDelta };
+    }
+
+    return {
+      latitude: userLoc?.latitude || 37.7749,
+      longitude: userLoc?.longitude || -122.4194,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+  };
+
+  const initialRegion = calculateInitialRegion(runData.coordinates, userLocation);
+
+  console.log('runData.coordinates:', runData.coordinates);
+  console.log('userLocation:', userLocation);
+  console.log('initialRegion:', initialRegion);
 
   const handleSaveAction = async () => {
     if (isHistoryMode) {
@@ -116,7 +184,6 @@ export default function DetailRunScreen() {
           Alert.alert('오류', '기록을 업데이트하지 못했습니다.');
         }
       } else {
-        // Navigate back to RunningHistory when confirming without editing
         router.replace('/(tabs)/Running/RunningHistory');
       }
     } else {
@@ -132,9 +199,12 @@ export default function DetailRunScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView style={styles.map} initialRegion={initialRegion}>
+      <MapView style={styles.map} initialRegion={initialRegion} showsUserLocation={true}>
         {runData.coordinates.length > 0 && (
           <Polyline coordinates={runData.coordinates} strokeColor="#FF5E2B" strokeWidth={3} />
+        )}
+        {userLocation && (
+          <Marker coordinate={userLocation} title="현재 위치" pinColor="blue" />
         )}
       </MapView>
 

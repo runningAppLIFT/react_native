@@ -49,23 +49,24 @@ const renderItem = ({ item }: { item: Post }) => {
         })
       }
     >
-      <ThemedText type="subtitle">{item.comm_title}</ThemedText>
-      <ThemedText numberOfLines={1} ellipsizeMode="tail">
+      <ThemedText type="subtitle" style={styles.blackText}>{item.comm_title}</ThemedText>
+      <ThemedText numberOfLines={1} ellipsizeMode="tail" style={styles.greyText}>
         {firstLine}
       </ThemedText>
       <View style={styles.contentinner}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ marginRight: 10 }}>작성자 {item.nickname}</Text>
-          <Text>{new Date(item.created_at).toLocaleDateString()}</Text>
+          <Text style={[styles.metaText, { marginRight: 10 }]}>작성자 {item.nickname}</Text>
+          <Text style={styles.metaText}>{new Date(item.created_at).toLocaleDateString()}</Text>
         </View>
         <View style={styles.likeContainer}>
           <IconSymbol name="message" color="#000" />
-          <Text>{item.commentCount}</Text>
+          <Text style={styles.metaText}>{item.commentCount}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 };
+
 
 
   // ListFooterComponent: 스크롤 끝에서의 UI
@@ -316,5 +317,19 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 16,
     color: '#333',
+  },
+  blackText: {
+    color: '#000000', // 검은색
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  greyText: {
+    color: '#555555', // 회색 (필요하면 수정)
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  metaText: {
+    color: '#333333', // 메타 정보용 어두운 회색
+    fontSize: 12,
   },
 });

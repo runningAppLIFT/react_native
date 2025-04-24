@@ -9,6 +9,10 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -87,82 +91,88 @@ export default function WritePost() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={handleCancelPost} style={styles.backButton}>
-          <Text style={styles.backButtonText}>◀</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEdit ? '게시글 수정' : '자유게시판'}</Text>
-      </View>
-
-      <TextInput
-        style={styles.input}
-        placeholder="제목입력"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="내용"
-        value={content}
-        onChangeText={setContent}
-        multiline
-      />
-      <View style={styles.imageRow}>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <View key={index} style={styles.imageBox}>
-            {images[index] ? (
-              <Image source={{ uri: images[index] }} style={styles.image} />
-            ) : (
-              <TouchableOpacity onPress={() => {/* TODO: Implement image upload */}}>
-                <Text style={styles.imageAddText}>사진</Text>
-              </TouchableOpacity>
-            )}
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ThemedView style={styles.container}>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity onPress={handleCancelPost} style={styles.backButton}>
+              <Text style={styles.backButtonText}>◀</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{isEdit ? '게시글 수정' : '자유게시판'}</Text>
           </View>
-        ))}
-      </View>
-      <TouchableOpacity
-        style={[styles.submitButton, (isCreateLoading || isUpdateLoading) && styles.disabledButton]}
-        onPress={handlePostSubmit}
-        disabled={isCreateLoading || isUpdateLoading}
-      >
-        {(isCreateLoading || isUpdateLoading) ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.submitButtonText}>
-            {isEdit ? '게시글 수정하기' : '게시글 작성하기'}
-          </Text>
-        )}
-      </TouchableOpacity>
 
-      <Modal
-        animationType="slide"
-        transparent
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>작성 취소</Text>
-            <Text style={styles.modalMessage}>작성 중인 내용을 취소하시겠습니까?</Text>
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setIsModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>아니오</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmCancel}
-              >
-                <Text style={styles.modalButtonText}>예</Text>
-              </TouchableOpacity>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <TextInput
+              style={styles.input}
+              placeholder="제목입력"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="내용"
+              value={content}
+              onChangeText={setContent}
+              multiline
+            />
+            <View style={styles.imageRow}>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <View key={index} style={styles.imageBox}>
+                  {images[index] ? (
+                    <Image source={{ uri: images[index] }} style={styles.image} />
+                  ) : (
+                    <TouchableOpacity onPress={() => {/* TODO: Implement image upload */}}>
+                      <Text style={styles.imageAddText}>사진</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
             </View>
-          </View>
-        </View>
-      </Modal>
-    </ThemedView>
+            <TouchableOpacity
+              style={[styles.submitButton, (isCreateLoading || isUpdateLoading) && styles.disabledButton]}
+              onPress={handlePostSubmit}
+              disabled={isCreateLoading || isUpdateLoading}
+            >
+              {(isCreateLoading || isUpdateLoading) ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {isEdit ? '게시글 수정하기' : '게시글 작성하기'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+
+          <Modal
+            animationType="slide"
+            transparent
+            visible={isModalVisible}
+            onRequestClose={() => setIsModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>작성 취소</Text>
+                <Text style={styles.modalMessage}>작성 중인 내용을 취소하시겠습니까?</Text>
+                <View style={styles.modalButtonContainer}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setIsModalVisible(false)}
+                  >
+                    <Text style={styles.modalButtonText}>아니오</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={confirmCancel}
+                  >
+                    <Text style={styles.modalButtonText}>예</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        </ThemedView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
