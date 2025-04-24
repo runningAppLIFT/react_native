@@ -12,11 +12,17 @@ const API_URL = Constants.expoConfig?.extra?.apiUrl;
 interface RunData {
   date: string;
   distance: string;
-  time: any;
-  pace: any;
+  time: { hours?: number; minutes?: number; seconds?: number } | string;
+  pace: { minutes?: number; seconds?: number } | string;
   title: string;
   description: string;
   coordinates: { latitude: number; longitude: number }[];
+}
+
+// 사용자 위치 타입 정의
+interface UserLocation {
+  latitude: number;
+  longitude: number;
 }
 
 export default function DetailRunScreen() {
@@ -32,13 +38,8 @@ export default function DetailRunScreen() {
 
   const isHistoryMode = !!parsedRecord;
   const [isEditing, setIsEditing] = useState(!isHistoryMode);
-  const [userLocation, setUserLocation] = useState(null);
-
-  // 디버깅 로그
-  console.log('Raw record from useLocalSearchParams:', record);
-  console.log('Parsed record:', parsedRecord);
-  console.log('run_course:', parsedRecord?.run_course);
-  console.log('run_course.coordinates:', parsedRecord?.run_course?.coordinates);
+  // userLocation 상태에 타입 명시
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   // 현재 위치 가져오기
   useEffect(() => {
@@ -62,23 +63,17 @@ export default function DetailRunScreen() {
     ? {
         date: parsedRecord?.created_at || '',
         distance: parsedRecord?.run_distance || '0',
-        time: parsedRecord?.run_time || '',
-        pace: parsedRecord?.run_pace || '',
+        time: parsedRecord?.run_time || { hours: 0, minutes: 0, seconds: 0 },
+        pace: parsedRecord?.run_pace || { minutes: 0, seconds: 0 },
         title: parsedRecord?.run_title || '',
         description: parsedRecord?.run_content || '',
-        coordinates:
-          parsedRecord?.run_course && Array.isArray(parsedRecord.run_course.coordinates)
-            ? parsedRecord.run_course.coordinates.map(([longitude, latitude]) => ({
-                latitude,
-                longitude,
-              }))
-            : [],
+        coordinates: parsedRecord?.run_course?.coordinates || [],
       }
     : {
-        date: Array.isArray(date) ? date[0] : date || '',
-        distance: Array.isArray(distance) ? distance[0] : distance || '0',
-        time: Array.isArray(time) ? time[0] : time || '',
-        pace: Array.isArray(pace) ? pace[0] : pace || '',
+        date: date || '',
+        distance: distance || '0',
+        time: time || { hours: 0, minutes: 0, seconds: 0 },
+        pace: pace || { minutes: 0, seconds: 0 },
         title: title || '',
         description: description || '',
         coordinates: routePath || [],
@@ -95,6 +90,7 @@ export default function DetailRunScreen() {
     }
   }, [runData.coordinates]);
 
+  // useRunRecorder 상태 동기화
   useEffect(() => {
     if (!isHistoryMode) {
       setTitle(localTitle);
@@ -102,38 +98,36 @@ export default function DetailRunScreen() {
     }
   }, [localTitle, localDescription, isHistoryMode, setTitle, setDescription]);
 
-  const formatPace = (pace) => {
-    if (isHistoryMode) {
-      const { hours = 0, minutes = 0 } = pace || {};
-      let paceStr = '';
-      if (hours > 0) paceStr += `${hours}:`;
-      paceStr += `${minutes.toString().padStart(2, '0')}/km`;
-      return paceStr;
+  // 페이스 포맷팅
+  const formatPace = (pace: RunData['pace']) => {
+    if (typeof pace === 'string') {
+      return pace;
     }
-    return pace;
+    const { minutes = 0, seconds = 0 } = pace || {};
+    return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
   };
 
-  const formatRunTime = (runTime) => {
-    if (isHistoryMode) {
-      const { hours = 0, minutes = 0, seconds = 0 } = runTime || {};
-      let timeStr = '';
-      if (hours > 0) timeStr += `${hours}시간 `;
-      if (minutes > 0) timeStr += `${minutes}분 `;
-      if (seconds > 0 || timeStr === '') timeStr += `${seconds}초`;
-      return timeStr.trim();
+  // 시간 포맷팅
+  const formatRunTime = (runTime: RunData['time']) => {
+    if (typeof runTime === 'string') {
+      return runTime;
     }
-    return runTime;
+    const { hours = 0, minutes = 0, seconds = 0 } = runTime || {};
+    let timeStr = '';
+    if (hours > 0) timeStr += `${hours}시간 `;
+    if (minutes > 0) timeStr += `${minutes}분 `;
+    if (seconds > 0 || timeStr === '') timeStr += `${seconds}초`;
+    return timeStr.trim();
   };
 
-  const formatDate = (dateStr) => {
-    if (isHistoryMode) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    }
-    return dateStr;
+  // 날짜 포맷팅
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
   };
 
-  const calculateInitialRegion = (coordinates, userLoc) => {
+  // 초기 지도 영역 계산
+  const calculateInitialRegion = (coordinates: { latitude: number; longitude: number }[], userLoc: UserLocation | null) => {
     if (coordinates?.length > 0) {
       const latitudes = coordinates.map((coord) => coord.latitude);
       const longitudes = coordinates.map((coord) => coord.longitude);
@@ -160,10 +154,7 @@ export default function DetailRunScreen() {
 
   const initialRegion = calculateInitialRegion(runData.coordinates, userLocation);
 
-  console.log('runData.coordinates:', runData.coordinates);
-  console.log('userLocation:', userLocation);
-  console.log('initialRegion:', initialRegion);
-
+  // 저장 처리
   const handleSaveAction = async () => {
     if (isHistoryMode) {
       if (isEditing) {
@@ -191,6 +182,7 @@ export default function DetailRunScreen() {
     }
   };
 
+  // 코스 저장 처리
   const handleSaveCourseAction = () => {
     if (!isHistoryMode) {
       handleSaveCourse();

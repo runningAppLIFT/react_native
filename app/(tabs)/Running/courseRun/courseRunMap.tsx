@@ -48,10 +48,10 @@ export default function FreeRun() {
     requestPermissions();
   }, []);
 
-  // 위치 정보 가져오기
+  // 위치 정보 가져오기 (커스텀 훅 사용)
   useLocation(setRegion);
 
-  // 달리기 시작 함수
+  // 러닝 시작 함수: 위치 추적 시작, 상태 초기화
   const startRunning = async () => {
     setIsRunning(true);
     setIsPaused(false);
@@ -62,6 +62,7 @@ export default function FreeRun() {
     setShowModal(true);
 
     try {
+      // 실시간 위치 추적 시작 (1초 간격, 2미터 이동 시 업데이트)
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -80,16 +81,16 @@ export default function FreeRun() {
               const newDistance = calculateDistance(updatedPath);
               setDistance(newDistance);
               if (newDistance > 0) {
-                const avgPace = (elapsedTime / newDistance) * 1000 / 60;
-                setPace(Math.floor(avgPace));
+                const avgPace = elapsedTime / newDistance / 60; // 분/km
+                setPace(avgPace);
               }
               if (updatedPath.length >= 2) {
                 const lastTwo = updatedPath.slice(-2);
                 const segmentDistance = calculateDistance(lastTwo);
                 const segmentTime = (lastTwo[1].timestamp! - lastTwo[0].timestamp!) / 1000;
                 if (segmentDistance > 0 && segmentTime > 0) {
-                  const currPace = (segmentTime / segmentDistance) * 1000 / 60;
-                  setCurrentPace(Math.floor(currPace));
+                  const currPace = segmentTime / segmentDistance / 60; // 분/km
+                  setCurrentPace(currPace);
                 }
               }
               return updatedPath;
@@ -112,7 +113,7 @@ export default function FreeRun() {
     }
   };
 
-  // 일시정지/재개 토글 함수
+  // 일시정지/재개 토글 함수: 러닝 상태 전환
   const togglePause = () => {
     if (!isPaused) {
       setElapsedTime(Math.floor((Date.now() - (startTime || 0)) / 1000));
@@ -122,7 +123,7 @@ export default function FreeRun() {
     setIsPaused(!isPaused);
   };
 
-  // 달리기 종료 함수
+  // 러닝 종료 함수: 위치 추적 종료, 결과 저장 및 화면 이동
   const stopRunning = () => {
     if (watchId !== null) {
       watchId.remove();
@@ -136,7 +137,7 @@ export default function FreeRun() {
 
     const formattedDistance = distance.toFixed(2);
     const formattedTime = formatTime(elapsedTime);
-    const avgPace = pace > 0 ? `${Math.floor(pace)}'${Math.round((pace % 1) * 60)}"` : "0'0\"";
+    const avgPace = pace > 0 ? `${Math.floor(pace)}'${(Math.round((pace % 1) * 60)).toString().padStart(2, '0')}"` : "0'00\"";
     const date = new Date().toLocaleString();
 
     router.push({
@@ -159,12 +160,12 @@ export default function FreeRun() {
     setIsLocked(false);
   };
 
-  // 잠금 상태 토글 함수
+  // 잠금 상태 토글 함수: 버튼 비활성화/활성화
   const toggleLock = () => {
     setIsLocked((prev) => !prev);
   };
 
-  // 경과 시간 업데이트
+  // 경과 시간 업데이트: 러닝 중 1초마다 시간 갱신
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isRunning && startTime && !isPaused) {
@@ -177,7 +178,7 @@ export default function FreeRun() {
     };
   }, [isRunning, startTime, isPaused]);
 
-  // 시간 포맷팅 함수
+  // 시간 포맷팅 함수: 초를 HH:MM:SS 또는 MM:SS 형식으로 변환
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -187,7 +188,7 @@ export default function FreeRun() {
       : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 거리 계산 함수
+  // 거리 계산 함수: 하버사인 공식을 사용해 좌표 간 거리 계산 (단위: km)
   const calculateDistance = (coords: Coordinate[]) => {
     if (coords.length < 2) return 0;
     let totalDistance = 0;
@@ -210,6 +211,7 @@ export default function FreeRun() {
 
   return (
     <View style={styles.container}>
+      {/* 지도 뷰: 사용자 위치와 경로 표시 */}
       <MapView
         style={styles.map}
         showsUserLocation
@@ -233,6 +235,7 @@ export default function FreeRun() {
         )}
       </MapView>
 
+      {/* 뒤로 가기 버튼 */}
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
@@ -241,6 +244,7 @@ export default function FreeRun() {
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
 
+      {/* 러닝 정보 모달 */}
       <RunModal
         visible={showModal}
         elapsedTime={elapsedTime}
@@ -253,6 +257,7 @@ export default function FreeRun() {
         isLocked={isLocked}
       />
 
+      {/* 러닝 제어 버튼: 시작/일시정지/재개 */}
       <View style={[styles.buttonWrapper, { zIndex: 1000 }]}>
         {isRunning && !isPaused && (
           <TouchableOpacity

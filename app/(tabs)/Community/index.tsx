@@ -153,8 +153,8 @@ const renderItem = ({ item }: { item: Post }) => {
                       }
                     >
                       <ThemedText style={styles.noticetitle} numberOfLines={1}  // 한 줄로 제한
-  ellipsizeMode="tail" // 말줄임표 처리
->{notice.comm_title}</ThemedText>
+                        ellipsizeMode="tail" // 말줄임표 처리
+                      >{notice.comm_title}</ThemedText>
                       <ThemedText style={styles.noticeDate}>
                         {new Date(notice.created_at).toLocaleDateString()}
                       </ThemedText>
